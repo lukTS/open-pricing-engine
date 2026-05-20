@@ -15,9 +15,14 @@ export class PricingEngine {
     }
 
     const area = input.dimensions.width * input.dimensions.height;
-    const subtotal = area * rule.unitPrice;
-    const total = subtotal * input.quantity;
+    let subtotal = area * rule.unitPrice;
 
+    if (rule.minCharge && subtotal < rule.minCharge) {
+      subtotal = rule.minCharge;
+    }
+
+    const total = subtotal * input.quantity;
+    
     return {
       rule: rule.name,
       area,
