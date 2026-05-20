@@ -68,4 +68,38 @@ describe('PricingEngine', () => {
       ).toThrow('Unknown rule: "nonexistent"');
     });
   });
+
+  describe('minCharge', () => {
+    it('uses minCharge when subtotal is below it', () => {
+      const result = engine.calculate({
+        rule: 'premium',
+        dimensions: { height: 1, width: 1 },
+        quantity: 1,
+      });
+
+      expect(result.subtotal).toBe(50);
+      expect(result.total).toBe(50);
+    });
+
+    it('does not apply minCharge when subtotal exceeds it', () => {
+      const result = engine.calculate({
+        rule: 'premium',
+        dimensions: { width: 2, height: 3 },
+        quantity: 1,
+      });
+
+      expect(result.subtotal).toBe(180);
+      expect(result.total).toBe(180);
+    });
+
+    it('has no effect when minCharge is not set', () => {
+      const result = engine.calculate({
+        rule: 'flat-surface',
+        dimensions: { width: 1, height: 1 },
+        quantity: 1,
+      });
+
+      expect(result.subtotal).toBe(12.5);
+    });
+  });
 });
