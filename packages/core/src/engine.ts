@@ -1,15 +1,18 @@
+import { CalculationInputSchema, PricingEngineConfigSchema } from './schemas.js';
 import type { CalculationInput, CalculationResult, PricingEngineConfig } from './types.js';
 
 export class PricingEngine {
   private rules: PricingEngineConfig['rules'];
 
   constructor(config: PricingEngineConfig) {
+    PricingEngineConfigSchema.parse(config);
     this.rules = config.rules;
   }
 
   calculate(input: CalculationInput): CalculationResult {
-    const rule = this.rules.find((r) => r.name === input.rule);
+    CalculationInputSchema.parse(input);
 
+    const rule = this.rules.find((r) => r.name === input.rule);
     if (!rule) {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }

@@ -11,13 +11,23 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": ["pricing", "engine", "calculator", "business-logic"],
+  "keywords": [
+    "pricing",
+    "engine",
+    "calculator",
+    "business-logic"
+  ],
   "author": "lukTS",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
 }
