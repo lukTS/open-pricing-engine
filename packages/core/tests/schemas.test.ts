@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PricingEngine } from '../src/engine.js';
+import { PricingEngine } from '../src/index.js';
 
 describe('PricingRuleConfigSchema', () => {
   it('throws on empty rule name', () => {
