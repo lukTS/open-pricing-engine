@@ -1,6 +1,8 @@
 # Open Pricing Engine
 
 [![CI](https://github.com/lukTS/open-pricing-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/lukTS/open-pricing-engine/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/open-pricing-engine)](https://www.npmjs.com/package/open-pricing-engine)
+[![npm downloads](https://img.shields.io/npm/dm/open-pricing-engine)](https://www.npmjs.com/package/open-pricing-engine)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 
@@ -20,7 +22,7 @@ Born from real-world experience building ERP pricing systems — area-based calc
 - **Area-based pricing** — calculations from dimensions (m², ft², units)
 - **Minimum charge** — guaranteed price floor per item
 - **Framework-agnostic** — pure TypeScript, runs anywhere
-- **Zero runtime dependencies** — lightweight and secure
+- **Minimal dependencies** — only Zod for validation
 - **100% test coverage** — tested with Vitest
 - **TypeScript-first** — full type safety, great DX
 
