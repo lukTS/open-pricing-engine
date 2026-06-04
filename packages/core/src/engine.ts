@@ -24,8 +24,17 @@ export class PricingEngine {
       subtotal = rule.minCharge;
     }
 
-    const total = subtotal * input.quantity;
-    
+    let adjusted = subtotal;
+
+    if (rule.adjustments) {
+      for (const adj of rule.adjustments) {
+        const amount = adj.type === 'percentage' ? adjusted * (adj.value / 100) : adj.value;
+        adjusted += amount;
+      }
+    }
+
+    const total = adjusted * input.quantity;
+
     return {
       rule: rule.name,
       area,
