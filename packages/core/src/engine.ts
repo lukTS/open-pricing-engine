@@ -1,5 +1,10 @@
 import { CalculationInputSchema, PricingEngineConfigSchema } from './schemas.js';
-import type { CalculationInput, CalculationResult, PricingEngineConfig } from './types.js';
+import type {
+  AppliedAdjustment,
+  CalculationInput,
+  CalculationResult,
+  PricingEngineConfig,
+} from './types.js';
 
 export class PricingEngine {
   private rules: PricingEngineConfig['rules'];
@@ -25,11 +30,13 @@ export class PricingEngine {
     }
 
     let adjusted = subtotal;
+    const appliedAdjustments: AppliedAdjustment[] = [];
 
     if (rule.adjustments) {
       for (const adj of rule.adjustments) {
         const amount = adj.type === 'percentage' ? adjusted * (adj.value / 100) : adj.value;
         adjusted += amount;
+        appliedAdjustments.push({ ...adj, amount });
       }
     }
 
@@ -40,6 +47,8 @@ export class PricingEngine {
       area,
       unitPrice: rule.unitPrice,
       subtotal,
+      adjustments: appliedAdjustments,
+      adjusted,
       quantity: input.quantity,
       total,
     };
