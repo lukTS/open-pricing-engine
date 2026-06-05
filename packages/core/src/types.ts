@@ -44,10 +44,10 @@ export type CalculationResult = {
   quantity: number;
   /** subtotal × quantity */
   total: number;
-  /** Applied adjustments with calculated amounts */
-  adjustments?: AppliedAdjustment[];
-  /** Subtotal after all adjustments applied */
-  adjusted?: number;
+  /** Applied adjustments with calculated amounts (empty array if none) */
+  adjustments: AppliedAdjustment[];
+  /** Subtotal after all adjustments applied (equals subtotal if none) */
+  adjusted: number;
 }
 
 /** Top-level config passed to PricingEngine. */

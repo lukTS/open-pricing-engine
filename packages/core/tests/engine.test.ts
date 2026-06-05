@@ -53,6 +53,8 @@ describe('PricingEngine', () => {
         area: 6,
         unitPrice: 12.5,
         subtotal: 75,
+        adjustments: [],
+        adjusted: 75,
         quantity: 2,
         total: 150,
       });
