@@ -115,3 +115,45 @@ describe('CalculationInputSchema', () => {
     })).toThrow();
   });
 });
+
+describe('AdjustmentSchema', () => {
+  it('throws on invalid adjustment type', () => {
+    expect(() => new PricingEngine({
+      rules: [{
+        name: 'test', type: 'area', unitPrice: 10, unit: 'm2',
+        // @ts-expect-error testing runtime validation of an invalid adjustment type
+        adjustments: [{ name: 'adj', type: 'invalid', value: 5 }],
+      }],
+    })).toThrow();
+  });
+
+  it('throws on percentage above 100', () => {
+    expect(() => new PricingEngine({
+      rules: [{
+        name: 'test', type: 'area', unitPrice: 10, unit: 'm2',
+        adjustments: [{ name: 'adj', type: 'percentage', value: 150 }],
+      }],
+    })).toThrow();
+  });
+
+  it('throws on percentage below -100', () => {
+    expect(() => new PricingEngine({
+      rules: [{
+        name: 'test', type: 'area', unitPrice: 10, unit: 'm2',
+        adjustments: [{ name: 'adj', type: 'percentage', value: -150 }],
+      }],
+    })).toThrow();
+  });
+
+  it('throws on duplicate adjustment names', () => {
+    expect(() => new PricingEngine({
+      rules: [{
+        name: 'test', type: 'area', unitPrice: 10, unit: 'm2',
+        adjustments: [
+          { name: 'same', type: 'percentage', value: 5 },
+          { name: 'same', type: 'fixed', value: 10 },
+        ],
+      }],
+    })).toThrow();
+  });
+});
