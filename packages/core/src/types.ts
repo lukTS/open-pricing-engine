@@ -12,13 +12,13 @@ export type PricingRuleConfig = {
   minCharge?: number;
   /** Price adjustments applied after subtotal calculation */
   adjustments?: Adjustment[];
-}
+};
 
 /** Width and height used to compute area. */
 export type CalculationDimensions = {
   width: number;
   height: number;
-}
+};
 
 /** Input passed to the engine's calculate method. */
 export type CalculationInput = {
@@ -28,7 +28,7 @@ export type CalculationInput = {
   dimensions: CalculationDimensions;
   /** Number of items */
   quantity: number;
-}
+};
 
 /** Result returned after price calculation. */
 export type CalculationResult = {
@@ -48,7 +48,7 @@ export type CalculationResult = {
   adjustments: AppliedAdjustment[];
   /** Subtotal after all adjustments applied (equals subtotal if none) */
   adjusted: number;
-}
+};
 
 /** Top-level config passed to PricingEngine. */
 export interface PricingEngineConfig {
@@ -63,7 +63,7 @@ export type Adjustment = {
   type: 'percentage' | 'fixed';
   /** Adjustment value (-10 = -10% or -10€, +15 = +15% or +15€) */
   value: number;
-}
+};
 
 /** Adjustment with calculated amount after applying to subtotal */
-export type AppliedAdjustment = Adjustment & { amount: number }
+export type AppliedAdjustment = Adjustment & { amount: number };

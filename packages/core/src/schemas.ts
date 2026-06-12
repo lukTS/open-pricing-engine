@@ -4,32 +4,32 @@ export const AdjustmentSchema = z.discriminatedUnion('type', [
   z.object({
     name: z.string().min(1, 'Adjustment name is required'),
     type: z.literal('percentage'),
-    value: z.number()
+    value: z
+      .number()
       .min(-100, 'Percentage cannot be less than -100')
       .max(100, 'Percentage cannot be greater than 100')
-      .describe('Adjustment percentage (-100 to 100)')
+      .describe('Adjustment percentage (-100 to 100)'),
   }),
   z.object({
     name: z.string().min(1, 'Adjustment name is required'),
     type: z.literal('fixed'),
-    value: z.number().describe('Fixed adjustment amount')
-  })
+    value: z.number().describe('Fixed adjustment amount'),
+  }),
 ]);
 
-export const AdjustmentsSchema = z.array(AdjustmentSchema)
-  .superRefine((items, ctx) => {
-    const names = new Set<string>();
-    items.forEach((item, index) => {
-      if (names.has(item.name)) {
-        ctx.addIssue({
-          code: "custom",
-          message: 'Adjustment name must be unique',
-          path: [index, 'name']
-        });
-      }
-      names.add(item.name);
-    });
+export const AdjustmentsSchema = z.array(AdjustmentSchema).superRefine((items, ctx) => {
+  const names = new Set<string>();
+  items.forEach((item, index) => {
+    if (names.has(item.name)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Adjustment name must be unique',
+        path: [index, 'name'],
+      });
+    }
+    names.add(item.name);
   });
+});
 
 export const PricingRuleConfigSchema = z.object({
   name: z.string().min(1, 'Rule name is required'),
@@ -37,7 +37,7 @@ export const PricingRuleConfigSchema = z.object({
   unitPrice: z.number().positive('unitPrice must be positive'),
   unit: z.string().min(1, 'Unit is required'),
   minCharge: z.number().positive('minCharge must be positive').optional(),
-  adjustments: AdjustmentsSchema.optional()
+  adjustments: AdjustmentsSchema.optional(),
 });
 
 export const CalculationDimensionsSchema = z.object({
