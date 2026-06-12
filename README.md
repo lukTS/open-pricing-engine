@@ -16,10 +16,13 @@ Every business has pricing logic. Most teams build it from scratch, tightly coup
 
 Born from real-world experience building ERP pricing systems — area-based calculations, tiered rates, minimum charges, discounts. Abstracted to work across any domain: manufacturing, logistics, SaaS, e-commerce.
 
+The npm ecosystem has plenty of billing and payment platforms (subscriptions, invoicing, tax), but few dedicated, standalone pricing engines — especially ones that handle physical dimensions like area, length, volume or weight. This library focuses purely on the pricing calculation: typed, validated, framework-agnostic, with no dependency on any payment provider.
+
 ## Features
 
 - **Config-driven** — define pricing rules in JSON, no hardcoding
 - **Area-based pricing** — calculations from dimensions (m², ft², units)
+- **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
 - **Framework-agnostic** — pure TypeScript, runs anywhere
 - **Minimal dependencies** — only Zod for validation
@@ -39,7 +42,7 @@ const engine = new PricingEngine({
   rules: [
     {
       name: 'flat-surface',
-      type: 'area-based',
+      type: 'area',
       unitPrice: 12.5,
       unit: 'm2',
       minCharge: 25.0,
@@ -58,9 +61,11 @@ const result = engine.calculate({
 //   rule: 'flat-surface',
 //   area: 3.0,
 //   unitPrice: 12.50,
-//   subtotal: 37.50,    // 3.0 × 12.50
+//   subtotal: 37.50,        // 3.0 × 12.50
+//   adjustments: [],        // no adjustments configured
+//   adjusted: 37.50,        // subtotal after adjustments
 //   quantity: 10,
-//   total: 375.00       // 37.50 × 10
+//   total: 375.00           // 37.50 × 10
 // }
 ```
 
@@ -76,14 +81,16 @@ Future versions will support tiered pricing, discounts, and custom formulas — 
 
 ## Roadmap
 
-| Version  | Scope                                           |
-| -------- | ----------------------------------------------- |
-| **v0.1** | Area-based pricing, JSON config, minimum charge |
-| v0.2     | Discounts & surcharges (%, absolute)            |
-| v0.3     | Price list versioning, effective dates          |
-| v0.4     | REST API wrapper (Fastify)                      |
-| v0.5     | Interactive playground (React)                  |
-| v1.0     | Plugin system for custom formulas               |
+| Version  | Scope                                                       | Status      |
+| -------- | ----------------------------------------------------------- | ----------- |
+| **v0.1** | Area-based pricing, JSON config, minimum charge             | Released    |
+| **v0.2** | Discounts & surcharges (%, absolute)                        | Released    |
+| v0.3     | Calculation strategies (area, linear, volume, weight, etc.) | In progress |
+| v0.4     | Price list versioning, effective dates                      | Planned     |
+| v0.5     | Tiered pricing (volume & graduated)                         | Planned     |
+| v0.6     | REST API wrapper (Fastify)                                  | Planned     |
+| v0.7     | Interactive playground (React)                              | Planned     |
+| v1.0     | Plugin system for custom formulas                           | Planned     |
 
 ## Project Structure
 
