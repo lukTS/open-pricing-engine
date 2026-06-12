@@ -114,9 +114,7 @@ describe('PricingEngine', () => {
             type: 'area',
             unitPrice: 30,
             unit: 'm2',
-            adjustments: [
-              { name: 'sale', type: 'percentage', value: -20 },
-            ],
+            adjustments: [{ name: 'sale', type: 'percentage', value: -20 }],
           },
         ],
       });
@@ -143,9 +141,7 @@ describe('PricingEngine', () => {
             type: 'area',
             unitPrice: 30,
             unit: 'm2',
-            adjustments: [
-              { name: 'priority', type: 'percentage', value: 15 },
-            ],
+            adjustments: [{ name: 'priority', type: 'percentage', value: 15 }],
           },
         ],
       });
@@ -172,9 +168,7 @@ describe('PricingEngine', () => {
             type: 'area',
             unitPrice: 30,
             unit: 'm2',
-            adjustments: [
-              { name: 'coupon', type: 'fixed', value: -5 },
-            ],
+            adjustments: [{ name: 'coupon', type: 'fixed', value: -5 }],
           },
         ],
       });
@@ -201,9 +195,7 @@ describe('PricingEngine', () => {
             type: 'area',
             unitPrice: 30,
             unit: 'm2',
-            adjustments: [
-              { name: 'coupon', type: 'fixed', value: 10 },
-            ],
+            adjustments: [{ name: 'coupon', type: 'fixed', value: 10 }],
           },
         ],
       });
@@ -332,6 +324,5 @@ describe('PricingEngine', () => {
       expect(result.adjusted).toBe(112.5);
       expect(result.total).toBe(337.5);
     });
-
   });
 });

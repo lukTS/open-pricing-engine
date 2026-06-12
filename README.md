@@ -40,9 +40,9 @@ const engine = new PricingEngine({
     {
       name: 'flat-surface',
       type: 'area-based',
-      unitPrice: 12.50,
+      unitPrice: 12.5,
       unit: 'm2',
-      minCharge: 25.00,
+      minCharge: 25.0,
     },
   ],
 });
@@ -76,14 +76,14 @@ Future versions will support tiered pricing, discounts, and custom formulas — 
 
 ## Roadmap
 
-| Version  | Scope                                            |
-|----------|--------------------------------------------------|
-| **v0.1** | Area-based pricing, JSON config, minimum charge  |
-| v0.2     | Discounts & surcharges (%, absolute)             |
-| v0.3     | Price list versioning, effective dates           |
-| v0.4     | REST API wrapper (Fastify)                       |
-| v0.5     | Interactive playground (React)                   |
-| v1.0     | Plugin system for custom formulas                |
+| Version  | Scope                                           |
+| -------- | ----------------------------------------------- |
+| **v0.1** | Area-based pricing, JSON config, minimum charge |
+| v0.2     | Discounts & surcharges (%, absolute)            |
+| v0.3     | Price list versioning, effective dates          |
+| v0.4     | REST API wrapper (Fastify)                      |
+| v0.5     | Interactive playground (React)                  |
+| v1.0     | Plugin system for custom formulas               |
 
 ## Project Structure
 
