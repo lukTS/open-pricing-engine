@@ -22,7 +22,7 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
-    const area = input.dimensions.width * input.dimensions.height;
+    const area = (input.dimensions.width ?? 0) * (input.dimensions.height ?? 0);
     let subtotal = area * rule.unitPrice;
 
     if (rule.minCharge && subtotal < rule.minCharge) {

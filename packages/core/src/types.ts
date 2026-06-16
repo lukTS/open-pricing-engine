@@ -14,10 +14,14 @@ export type PricingRuleConfig = {
   adjustments?: Adjustment[];
 };
 
-/** Width and height used to compute area. */
+/** Dimensions used by calculation strategies; each strategy reads the fields it needs. */
 export type CalculationDimensions = {
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+  length?: number;
+  weight?: number;
+  hours?: number;
 };
 
 /** Input passed to the engine's calculate method. */
