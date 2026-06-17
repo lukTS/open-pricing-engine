@@ -1,4 +1,5 @@
 import { CalculationInputSchema, PricingEngineConfigSchema } from './schemas.js';
+import { strategies } from './strategies/index.js';
 import type {
   AppliedAdjustment,
   CalculationInput,
@@ -22,8 +23,18 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
-    const area = (input.dimensions.width ?? 0) * (input.dimensions.height ?? 0);
-    let subtotal = area * rule.unitPrice;
+    const strategy = strategies[rule.type];
+    if (!strategy) {
+      throw new Error(`Unknown type: "${rule.type}"`);
+    }
+
+    const missing = strategy.requiredFields.filter((f) => !(f in input.dimensions));
+    if (missing.length > 0) {
+      throw new Error(`Missing fields: ${missing.join(', ')}`);
+    }
+
+    const measure = strategy.measure(input.dimensions);
+    let subtotal = measure * rule.unitPrice;
 
     if (rule.minCharge && subtotal < rule.minCharge) {
       subtotal = rule.minCharge;
@@ -44,7 +55,7 @@ export class PricingEngine {
 
     return {
       rule: rule.name,
-      area,
+      area: measure,
       unitPrice: rule.unitPrice,
       subtotal,
       adjustments: appliedAdjustments,
