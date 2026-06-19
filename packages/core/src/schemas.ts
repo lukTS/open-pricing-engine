@@ -41,8 +41,12 @@ export const PricingRuleConfigSchema = z.object({
 });
 
 export const CalculationDimensionsSchema = z.object({
-  width: z.number().positive('Width must be positive'),
-  height: z.number().positive('Height must be positive'),
+  width: z.number().positive('Width must be positive').optional(),
+  height: z.number().positive('Height must be positive').optional(),
+  length: z.number().positive('Length must be positive').optional(),
+  depth: z.number().positive('Depth must be positive').optional(),
+  weight: z.number().positive('Weight must be positive').optional(),
+  hours: z.number().positive('Hours must be positive').optional(),
 });
 
 export const CalculationInputSchema = z.object({
