@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PricingEngine } from '../src/index.js';
+import { CalculationDimensionsSchema, PricingEngine } from '../src/index.js';
 
 describe('PricingRuleConfigSchema', () => {
   it('throws on empty rule name', () => {
@@ -222,5 +222,19 @@ describe('AdjustmentSchema', () => {
           ],
         }),
     ).toThrow();
+  });
+});
+
+describe('CalculationDimensionsSchema', () => {
+  it('accepts dimensions with only length', () => {
+    expect(() => CalculationDimensionsSchema.parse({ length: 5 })).not.toThrow();
+  });
+
+  it('still rejects a non-positive value', () => {
+    expect(() => CalculationDimensionsSchema.parse({ length: -5 })).toThrow();
+  });
+
+  it('still accepts area dimensions', () => {
+    expect(() => CalculationDimensionsSchema.parse({ width: 2, height: 3 })).not.toThrow();
   });
 });
