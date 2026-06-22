@@ -326,3 +326,49 @@ describe('PricingEngine', () => {
     });
   });
 });
+
+describe('linear', () => {
+  const engine = new PricingEngine({
+    rules: [{ name: 'profile', type: 'linear', unitPrice: 4, unit: 'm' }],
+  });
+
+  it('computes measure from length', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { length: 5 },
+      quantity: 1,
+    });
+
+    expect(result.area).toBe(5);
+  });
+
+  it('computes subtotal as length × unitPrice', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { length: 5 },
+      quantity: 1,
+    });
+
+    expect(result.subtotal).toBe(20);
+  });
+
+  it('computes total as subtotal × quantity', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { length: 5 },
+      quantity: 3,
+    });
+
+    expect(result.total).toBe(60);
+  });
+
+  it('throws when length is missing', () => {
+    expect(() =>
+      engine.calculate({
+        rule: 'profile',
+        dimensions: {},
+        quantity: 3,
+      }),
+    ).toThrow('Missing fields: length');
+  });
+});
