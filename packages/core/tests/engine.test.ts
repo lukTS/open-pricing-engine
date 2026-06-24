@@ -17,7 +17,7 @@ describe('PricingEngine', () => {
         quantity: 1,
       });
 
-      expect(result.area).toBe(6);
+      expect(result.measure).toBe(6);
     });
 
     it('computes subtotal as area × unitPrice', () => {
@@ -50,7 +50,7 @@ describe('PricingEngine', () => {
 
       expect(result).toEqual({
         rule: 'flat-surface',
-        area: 6,
+        measure: 6,
         unitPrice: 12.5,
         subtotal: 75,
         adjustments: [],
@@ -339,7 +339,7 @@ describe('linear', () => {
       quantity: 1,
     });
 
-    expect(result.area).toBe(5);
+    expect(result.measure).toBe(5);
   });
 
   it('computes subtotal as length × unitPrice', () => {
