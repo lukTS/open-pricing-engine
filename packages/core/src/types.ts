@@ -28,7 +28,7 @@ export type CalculationDimensions = {
 export type CalculationInput = {
   /** Name of the rule to apply */
   rule: string;
-  /** Dimensions for area calculation */
+  /** Dimensions passed to the calculation strategy */
   dimensions: CalculationDimensions;
   /** Number of items */
   quantity: number;
@@ -38,11 +38,11 @@ export type CalculationInput = {
 export type CalculationResult = {
   /** Rule that was used */
   rule: string;
-  /** Computed area (width × height) */
-  area: number;
+  /** Computed measure (strategy-dependent: area, length, volume, etc.) */
+  measure: number;
   /** Price per unit from the matched rule */
   unitPrice: number;
-  /** area × unitPrice (or minCharge if higher) */
+  /** measure × unitPrice (or minCharge if higher) */
   subtotal: number;
   /** Number of items */
   quantity: number;

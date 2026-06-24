@@ -55,7 +55,7 @@ export class PricingEngine {
 
     return {
       rule: rule.name,
-      area: measure,
+      measure,
       unitPrice: rule.unitPrice,
       subtotal,
       adjustments: appliedAdjustments,
