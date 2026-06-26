@@ -372,3 +372,59 @@ describe('linear', () => {
     ).toThrow('Missing fields: length');
   });
 });
+
+describe('volume', () => {
+  const engine = new PricingEngine({
+    rules: [{ name: 'profile', type: 'volume', unitPrice: 4, unit: 'm3' }],
+  });
+
+  it('computes measure from volume', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { width: 2, height: 3, depth: 4 },
+      quantity: 1,
+    });
+
+    expect(result.measure).toBe(24);
+  });
+
+  it('computes subtotal as volume × unitPrice', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { width: 2, height: 3, depth: 4 },
+      quantity: 1,
+    });
+
+    expect(result.subtotal).toBe(96);
+  });
+
+  it('computes total as subtotal × quantity', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { width: 2, height: 3, depth: 4 },
+      quantity: 2,
+    });
+
+    expect(result.total).toBe(192);
+  });
+
+  it('throws when width, height, depth are missing', () => {
+    expect(() =>
+      engine.calculate({
+        rule: 'profile',
+        dimensions: {},
+        quantity: 3,
+      }),
+    ).toThrow('Missing fields: width, height, depth');
+  });
+
+  it('throws when one dimension is missing', () => {
+    expect(() =>
+      engine.calculate({
+        rule: 'profile',
+        dimensions: { width: 2, height: 3 },
+        quantity: 1,
+      }),
+    ).toThrow('Missing fields: depth');
+  });
+});
