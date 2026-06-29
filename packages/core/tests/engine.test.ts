@@ -428,3 +428,49 @@ describe('volume', () => {
     ).toThrow('Missing fields: depth');
   });
 });
+
+describe('weight', () => {
+  const engine = new PricingEngine({
+    rules: [{ name: 'profile', type: 'weight', unitPrice: 4, unit: 'kg' }],
+  });
+
+  it('computes measure from weight', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { weight: 5 },
+      quantity: 1,
+    });
+
+    expect(result.measure).toBe(5);
+  });
+
+  it('computes subtotal as weight × unitPrice', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { weight: 5 },
+      quantity: 1,
+    });
+
+    expect(result.subtotal).toBe(20);
+  });
+
+  it('computes total as subtotal × quantity', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { weight: 5 },
+      quantity: 2,
+    });
+
+    expect(result.total).toBe(40);
+  });
+
+  it('throws when weight is missing', () => {
+    expect(() =>
+      engine.calculate({
+        rule: 'profile',
+        dimensions: {},
+        quantity: 3,
+      }),
+    ).toThrow('Missing fields: weight');
+  });
+});
