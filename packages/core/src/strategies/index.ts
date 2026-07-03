@@ -1,4 +1,5 @@
 import { area } from './area.js';
+import { flat } from './flat.js';
 import { linear } from './linear.js';
 import { piece } from './piece.js';
 import type { CalculationStrategy } from './types.js';
@@ -12,4 +13,5 @@ export const strategies: Record<string, CalculationStrategy> = {
   volume,
   weight,
   piece,
+  flat,
 };

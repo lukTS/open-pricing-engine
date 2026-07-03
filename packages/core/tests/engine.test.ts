@@ -510,3 +510,39 @@ describe('piece', () => {
     expect(result.total).toBe(20);
   });
 });
+
+describe('flat', () => {
+  const engine = new PricingEngine({
+    rules: [{ name: 'profile', type: 'flat', unitPrice: 4, unit: 'pcs' }],
+  });
+
+  it('returns measure as 1', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: {},
+      quantity: 1,
+    });
+
+    expect(result.measure).toBe(1);
+  });
+
+  it('computes subtotal as flat × unitPrice', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: {},
+      quantity: 1,
+    });
+
+    expect(result.subtotal).toBe(4);
+  });
+
+  it('computes total as subtotal × quantity', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: {},
+      quantity: 5,
+    });
+
+    expect(result.total).toBe(20);
+  });
+});
