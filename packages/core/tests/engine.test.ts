@@ -546,3 +546,49 @@ describe('flat', () => {
     expect(result.total).toBe(20);
   });
 });
+
+describe('time', () => {
+  const engine = new PricingEngine({
+    rules: [{ name: 'profile', type: 'time', unitPrice: 4, unit: 'h' }],
+  });
+
+  it('computes measure from hours', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { hours: 5 },
+      quantity: 1,
+    });
+
+    expect(result.measure).toBe(5);
+  });
+
+  it('computes subtotal as hours × unitPrice', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { hours: 5 },
+      quantity: 1,
+    });
+
+    expect(result.subtotal).toBe(20);
+  });
+
+  it('computes total as subtotal × quantity', () => {
+    const result = engine.calculate({
+      rule: 'profile',
+      dimensions: { hours: 5 },
+      quantity: 3,
+    });
+
+    expect(result.total).toBe(60);
+  });
+
+  it('throws when hours is missing', () => {
+    expect(() =>
+      engine.calculate({
+        rule: 'profile',
+        dimensions: {},
+        quantity: 3,
+      }),
+    ).toThrow('Missing fields: hours');
+  });
+});
