@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { strategies } from './strategies/index.js';
 
 export const AdjustmentSchema = z.discriminatedUnion('type', [
   z.object({
@@ -31,9 +32,14 @@ export const AdjustmentsSchema = z.array(AdjustmentSchema).superRefine((items, c
   });
 });
 
+/** Known strategy types, derived from the registry — no manual list to keep in sync. */
+export const RuleTypeSchema = z.enum(
+  Object.keys(strategies) as [string, ...string[]],
+);
+
 export const PricingRuleConfigSchema = z.object({
   name: z.string().min(1, 'Rule name is required'),
-  type: z.string().min(1, 'Rule type is required'),
+  type: RuleTypeSchema,
   unitPrice: z.number().positive('unitPrice must be positive'),
   unit: z.string().min(1, 'Unit is required'),
   minCharge: z.number().positive('minCharge must be positive').optional(),
