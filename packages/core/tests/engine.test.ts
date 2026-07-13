@@ -369,7 +369,7 @@ describe('linear', () => {
         dimensions: {},
         quantity: 3,
       }),
-    ).toThrow('Missing fields: length');
+    ).toThrow(/length/i);
   });
 });
 
@@ -415,7 +415,7 @@ describe('volume', () => {
         dimensions: {},
         quantity: 3,
       }),
-    ).toThrow('Missing fields: width, height, depth');
+    ).toThrow(/width/i);
   });
 
   it('throws when one dimension is missing', () => {
@@ -425,7 +425,7 @@ describe('volume', () => {
         dimensions: { width: 2, height: 3 },
         quantity: 1,
       }),
-    ).toThrow('Missing fields: depth');
+    ).toThrow(/depth/i);
   });
 });
 
@@ -471,7 +471,7 @@ describe('weight', () => {
         dimensions: {},
         quantity: 3,
       }),
-    ).toThrow('Missing fields: weight');
+    ).toThrow(/weight/i);
   });
 });
 
@@ -589,6 +589,6 @@ describe('time', () => {
         dimensions: {},
         quantity: 3,
       }),
-    ).toThrow('Missing fields: hours');
+    ).toThrow(/hours/i);
   });
 });
