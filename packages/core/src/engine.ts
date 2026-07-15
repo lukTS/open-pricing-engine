@@ -1,4 +1,8 @@
-import { CalculationInputSchema, PricingEngineConfigSchema } from './schemas.js';
+import {
+  CalculationInputSchema,
+  dimensionSchemasByType,
+  PricingEngineConfigSchema,
+} from './schemas.js';
 import { strategies } from './strategies/index.js';
 import type {
   AppliedAdjustment,
@@ -24,14 +28,13 @@ export class PricingEngine {
     }
 
     const strategy = strategies[rule.type];
-    if (!strategy) {
+    const dimensionsSchema = dimensionSchemasByType[rule.type];
+    if (!strategy || !dimensionsSchema) {
       throw new Error(`Unknown type: "${rule.type}"`);
     }
 
-    const missing = strategy.requiredFields.filter((f) => !(f in input.dimensions));
-    if (missing.length > 0) {
-      throw new Error(`Missing fields: ${missing.join(', ')}`);
-    }
+    // Per-strategy dimension validation (throws a descriptive ZodError).
+    dimensionsSchema.parse(input.dimensions);
 
     const measure = strategy.measure(input.dimensions);
     let subtotal = measure * rule.unitPrice;
