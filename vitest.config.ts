@@ -7,6 +7,12 @@ export default defineConfig({
       include: ['packages/*/src/**/*.ts'],
       exclude: ['**/types.ts'],
       reporter: ['text', 'html'],
+      thresholds: {
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+      },
     },
   },
 });
