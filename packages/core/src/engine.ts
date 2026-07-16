@@ -29,6 +29,7 @@ export class PricingEngine {
 
     const strategy = strategies[rule.type];
     const dimensionsSchema = dimensionSchemasByType[rule.type];
+    /* v8 ignore next 3 -- unreachable: rule.type is validated against the strategy registry at config time */
     if (!strategy || !dimensionsSchema) {
       throw new Error(`Unknown type: "${rule.type}"`);
     }
