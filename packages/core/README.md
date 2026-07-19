@@ -21,7 +21,7 @@ const engine = new PricingEngine({
   rules: [
     {
       name: 'flat-surface',
-      type: 'area-based',
+      type: 'area',
       unitPrice: 12.5,
       unit: 'm2',
       minCharge: 25.0,
@@ -38,9 +38,11 @@ const result = engine.calculate({
 // Result:
 // {
 //   rule: 'flat-surface',
-//   area: 3.0,
+//   measure: 3.0,
 //   unitPrice: 12.50,
 //   subtotal: 37.50,
+//   adjustments: [],
+//   adjusted: 37.50,
 //   quantity: 10,
 //   total: 375.00
 // }
@@ -49,7 +51,8 @@ const result = engine.calculate({
 ## Features
 
 - **Config-driven** — define pricing rules in JSON
-- **Area-based pricing** — calculations from dimensions (m², ft², units)
+- **Multiple pricing strategies** — area, linear, volume, weight, time, piece, flat
+- **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
 - **TypeScript-first** — full type safety
 - **Zod validation** — descriptive errors for invalid config

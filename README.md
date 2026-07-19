@@ -21,9 +21,10 @@ The npm ecosystem has plenty of billing and payment platforms (subscriptions, in
 ## Features
 
 - **Config-driven** — define pricing rules in JSON, no hardcoding
-- **Area-based pricing** — calculations from dimensions (m², ft², units)
+- **Multiple pricing strategies** — area, linear, volume, weight, time, piece and flat
 - **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
+- **Per-strategy validation** — each strategy's required dimensions are checked with descriptive errors
 - **Framework-agnostic** — pure TypeScript, runs anywhere
 - **Minimal dependencies** — only Zod for validation
 - **100% test coverage** — tested with Vitest
@@ -59,7 +60,7 @@ const result = engine.calculate({
 // Result:
 // {
 //   rule: 'flat-surface',
-//   area: 3.0,
+//   measure: 3.0,
 //   unitPrice: 12.50,
 //   subtotal: 37.50,        // 3.0 × 12.50
 //   adjustments: [],        // no adjustments configured
@@ -68,6 +69,40 @@ const result = engine.calculate({
 //   total: 375.00           // 37.50 × 10
 // }
 ```
+
+## Strategies
+
+The calculation type is chosen per rule via the `type` field. Each strategy
+turns the input `dimensions` into a billable `measure`, then
+`subtotal = measure × unitPrice`.
+
+| `type`   | Required dimensions        | `measure`                | Example unit |
+| -------- | -------------------------- | ------------------------ | ------------ |
+| `area`   | `width`, `height`          | `width × height`         | m²           |
+| `linear` | `length`                   | `length`                 | m            |
+| `volume` | `width`, `height`, `depth` | `width × height × depth` | m³           |
+| `weight` | `weight`                   | `weight`                 | kg           |
+| `time`   | `hours`                    | `hours`                  | h            |
+| `piece`  | —                          | `1` (per-unit item)      | pc           |
+| `flat`   | —                          | `1` (fixed service fee)  | job          |
+
+```typescript
+const engine = new PricingEngine({
+  rules: [
+    { name: 'cable', type: 'linear', unitPrice: 3, unit: 'm' },
+    { name: 'tank', type: 'volume', unitPrice: 8, unit: 'm3' },
+    { name: 'setup', type: 'flat', unitPrice: 50, unit: 'job' },
+  ],
+});
+
+engine.calculate({ rule: 'cable', dimensions: { length: 4 }, quantity: 1 }).measure; // 4
+engine.calculate({ rule: 'tank', dimensions: { width: 2, height: 2, depth: 2 }, quantity: 1 })
+  .measure; // 8
+engine.calculate({ rule: 'setup', dimensions: {}, quantity: 1 }).measure; // 1
+```
+
+Missing required dimensions throw a descriptive validation error (for example,
+a `volume` rule without `depth`).
 
 ## Use Cases
 
@@ -81,16 +116,16 @@ Future versions will support tiered pricing, discounts, and custom formulas — 
 
 ## Roadmap
 
-| Version  | Scope                                                       | Status      |
-| -------- | ----------------------------------------------------------- | ----------- |
-| **v0.1** | Area-based pricing, JSON config, minimum charge             | Released    |
-| **v0.2** | Discounts & surcharges (%, absolute)                        | Released    |
-| v0.3     | Calculation strategies (area, linear, volume, weight, etc.) | In progress |
-| v0.4     | Price list versioning, effective dates                      | Planned     |
-| v0.5     | Tiered pricing (volume & graduated)                         | Planned     |
-| v0.6     | REST API wrapper (Fastify)                                  | Planned     |
-| v0.7     | Interactive playground (React)                              | Planned     |
-| v1.0     | Plugin system for custom formulas                           | Planned     |
+| Version  | Scope                                                       | Status   |
+| -------- | ----------------------------------------------------------- | -------- |
+| **v0.1** | Area-based pricing, JSON config, minimum charge             | Released |
+| **v0.2** | Discounts & surcharges (%, absolute)                        | Released |
+| **v0.3** | Calculation strategies (area, linear, volume, weight, etc.) | Released |
+| v0.4     | Price list versioning, effective dates                      | Planned  |
+| v0.5     | Tiered pricing (volume & graduated)                         | Planned  |
+| v0.6     | REST API wrapper (Fastify)                                  | Planned  |
+| v0.7     | Interactive playground (React)                              | Planned  |
+| v1.0     | Plugin system for custom formulas                           | Planned  |
 
 ## Project Structure
 
