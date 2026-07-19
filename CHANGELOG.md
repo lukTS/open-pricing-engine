@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-16
+
+### Added
+
+- Calculation strategies selectable via the rule `type` field. Alongside the
+  existing `area` (`width × height`), the engine now supports:
+  - `linear` — `length`
+  - `volume` — `width × height × depth`
+  - `weight` — `weight`
+  - `time` — `hours`
+  - `piece` and `flat` — a fixed measure of `1` (per-unit item / fixed fee).
+- Per-strategy dimension validation: each strategy declares its required
+  dimensions, validated with descriptive Zod errors before calculation.
+- Rule `type` is validated against the known strategy registry at config time,
+  so an unknown type is rejected when the engine is constructed.
+- Architecture Decision Record documenting the Strategy pattern
+  (`docs/adr/0001-use-strategy-pattern-for-calculations.md`).
+
 ## [0.2.0] - 2026-06-12
 
 ### Added
@@ -37,5 +55,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zod validation for engine configuration and calculation input.
 - 100% test coverage.
 
+[0.3.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.1.0
