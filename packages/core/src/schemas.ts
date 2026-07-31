@@ -57,6 +57,14 @@ export const CalculationInputSchema = z.object({
   rule: z.string().min(1, 'Rule name is required'),
   dimensions: CalculationDimensionsSchema,
   quantity: z.number().int().positive('Quantity must be a positive integer'),
+  date: z.coerce.date().optional(),
+});
+
+export const PriceListSchema = z.object({
+  version: z.string().min(1, 'Version is required'),
+  effectiveFrom: z.iso.date(),
+  effectiveTo: z.iso.date().optional(),
+  rules: z.array(PricingRuleConfigSchema).min(1, 'At least one rule is required'),
 });
 
 export const PricingEngineConfigSchema = z.object({
@@ -66,7 +74,9 @@ export const PricingEngineConfigSchema = z.object({
     .refine(
       (rules) => new Set(rules.map((r) => r.name)).size === rules.length,
       'Rule names must be unique',
-    ),
+    )
+    .optional(),
+  priceLists: z.array(PriceListSchema).min(1, 'At least one price list is required').optional(),
 });
 
 // --- Per-strategy dimension validation -------------------------------------

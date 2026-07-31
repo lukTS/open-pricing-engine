@@ -9,20 +9,45 @@ import type {
   CalculationInput,
   CalculationResult,
   PricingEngineConfig,
+  PricingRuleConfig,
 } from './types.js';
 
+/** Internal, always-resolved shape produced by the constructor from either config branch. */
+type NormalizedPriceList = {
+  version: string;
+  from: number;
+  to: number;
+  rules: PricingRuleConfig[];
+};
+
 export class PricingEngine {
-  private rules: PricingEngineConfig['rules'];
+  private priceLists: NormalizedPriceList[];
 
   constructor(config: PricingEngineConfig) {
     PricingEngineConfigSchema.parse(config);
-    this.rules = config.rules;
+
+    // Legacy { rules } normalizes to one always-effective list, so calculate() has a single shape.
+    this.priceLists =
+      'rules' in config
+        ? [{ version: 'default', from: -Infinity, to: Infinity, rules: config.rules }]
+        : config.priceLists.map((list) => ({
+            version: list.version,
+            from: Date.parse(list.effectiveFrom),
+            to: list.effectiveTo ? Date.parse(list.effectiveTo) : Infinity,
+            rules: list.rules,
+          }));
   }
 
   calculate(input: CalculationInput): CalculationResult {
     CalculationInputSchema.parse(input);
 
-    const rule = this.rules.find((r) => r.name === input.rule);
+    const [priceList] = this.priceLists;
+    /* v8 ignore next 3 -- unreachable: config validation guarantees at least one price list */
+    if (!priceList) {
+      throw new Error('No price list is effective');
+    }
+
+    const rule = priceList.rules.find((r) => r.name === input.rule);
     if (!rule) {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
