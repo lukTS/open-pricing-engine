@@ -32,6 +32,8 @@ export type CalculationInput = {
   dimensions: CalculationDimensions;
   /** Number of items */
   quantity: number;
+  /** Date used to resolve the active price list */
+  date?: Date | string;
 };
 
 /** Result returned after price calculation. */
@@ -54,10 +56,22 @@ export type CalculationResult = {
   adjusted: number;
 };
 
-/** Top-level config passed to PricingEngine. */
-export interface PricingEngineConfig {
+/** Versioned price list with rules active during a specific date range. */
+export type PriceList = {
+  /** Human-readable version label, e.g. "2026-Q1" */
+  version: string;
+  /** Start date when this price list becomes active (ISO format: YYYY-MM-DD) */
+  effectiveFrom: string;
+  /** End date when this price list stops being active (ISO format: YYYY-MM-DD) */
+  effectiveTo?: string;
+  /** Pricing rules included in this price list */
   rules: PricingRuleConfig[];
-}
+};
+
+/** Top-level config passed to PricingEngine. */
+export type PricingEngineConfig =
+  | { rules: PricingRuleConfig[] } // legacy (v0.1–v0.3)
+  | { priceLists: PriceList[] }; // versioned (v0.4+)
 
 /** Adjustment rule (discount or surcharge) */
 export type Adjustment = {
