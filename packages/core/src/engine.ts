@@ -30,21 +30,26 @@ export class PricingEngine {
     this.priceLists =
       'rules' in config
         ? [{ version: 'default', from: -Infinity, to: Infinity, rules: config.rules }]
-        : config.priceLists.map((list) => ({
-            version: list.version,
-            from: Date.parse(list.effectiveFrom),
-            to: list.effectiveTo ? Date.parse(list.effectiveTo) : Infinity,
-            rules: list.rules,
-          }));
+        : config.priceLists
+            .map((list) => ({
+              version: list.version,
+              from: Date.parse(list.effectiveFrom),
+              to: list.effectiveTo ? Date.parse(list.effectiveTo) : Infinity,
+              rules: list.rules,
+            }))
+            .sort((a, b) => a.from - b.from);
   }
 
   calculate(input: CalculationInput): CalculationResult {
     CalculationInputSchema.parse(input);
 
-    const [priceList] = this.priceLists;
-    /* v8 ignore next 3 -- unreachable: config validation guarantees at least one price list */
+    const targetMs = input.date ? new Date(input.date).getTime() : Date.now();
+
+    const priceList = this.priceLists.find((list) => list.from <= targetMs && list.to > targetMs);
+
     if (!priceList) {
-      throw new Error('No price list is effective');
+      const isoDate = new Date(targetMs).toISOString().slice(0, 10);
+      throw new Error(`No price list is effective on ${isoDate}`);
     }
 
     const rule = priceList.rules.find((r) => r.name === input.rule);
