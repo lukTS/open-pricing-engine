@@ -32,7 +32,7 @@ export type CalculationInput = {
   dimensions: CalculationDimensions;
   /** Number of items */
   quantity: number;
-  /** Date used to resolve the active price list */
+  /** Date used to resolve the active price list; defaults to the current date */
   date?: Date | string;
 };
 
@@ -60,9 +60,9 @@ export type CalculationResult = {
 export type PriceList = {
   /** Human-readable version label, e.g. "2026-Q1" */
   version: string;
-  /** Start date when this price list becomes active (ISO format: YYYY-MM-DD) */
+  /** Start date when this price list becomes active, inclusive (ISO format: YYYY-MM-DD) */
   effectiveFrom: string;
-  /** End date when this price list stops being active (ISO format: YYYY-MM-DD) */
+  /** End date when this price list stops being active, exclusive (ISO format: YYYY-MM-DD) */
   effectiveTo?: string;
   /** Pricing rules included in this price list */
   rules: PricingRuleConfig[];
