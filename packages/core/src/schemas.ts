@@ -60,24 +60,95 @@ export const CalculationInputSchema = z.object({
   date: z.coerce.date().optional(),
 });
 
-export const PriceListSchema = z.object({
-  version: z.string().min(1, 'Version is required'),
-  effectiveFrom: z.iso.date(),
-  effectiveTo: z.iso.date().optional(),
-  rules: z.array(PricingRuleConfigSchema).min(1, 'At least one rule is required'),
-});
+export const PriceListSchema = z
+  .object({
+    version: z.string().min(1, 'Version is required'),
+    effectiveFrom: z.iso.date(),
+    effectiveTo: z.iso.date().optional(),
+    // Scoped per price list: the same rule name in another version is the point of versioning.
+    rules: z
+      .array(PricingRuleConfigSchema)
+      .min(1, 'At least one rule is required')
+      .refine(
+        (rules) => new Set(rules.map((r) => r.name)).size === rules.length,
+        'Rule names must be unique within a price list',
+      ),
+  })
+  .superRefine((list, ctx) => {
+    if (list.effectiveTo && Date.parse(list.effectiveFrom) >= Date.parse(list.effectiveTo)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `Price list "${list.version}": effectiveFrom must be before effectiveTo`,
+        path: ['effectiveTo'],
+      });
+    }
+  });
 
-export const PricingEngineConfigSchema = z.object({
-  rules: z
-    .array(PricingRuleConfigSchema)
-    .min(1, 'At least one rule is required')
-    .refine(
-      (rules) => new Set(rules.map((r) => r.name)).size === rules.length,
-      'Rule names must be unique',
-    )
-    .optional(),
-  priceLists: z.array(PriceListSchema).min(1, 'At least one price list is required').optional(),
-});
+export const PricingEngineConfigSchema = z
+  .object({
+    rules: z
+      .array(PricingRuleConfigSchema)
+      .min(1, 'At least one rule is required')
+      .refine(
+        (rules) => new Set(rules.map((r) => r.name)).size === rules.length,
+        'Rule names must be unique',
+      )
+      .optional(),
+    priceLists: z.array(PriceListSchema).min(1, 'At least one price list is required').optional(),
+  })
+  // superRefine, not z.union: a union collapses both branches into an unreadable error message.
+  .superRefine((config, ctx) => {
+    if (config.rules && config.priceLists) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Provide either "rules" or "priceLists", not both',
+      });
+      return;
+    }
+
+    if (!config.rules && !config.priceLists) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Config must contain "rules" or "priceLists"',
+      });
+      return;
+    }
+
+    if (!config.priceLists) return;
+
+    const seenVersions = new Set<string>();
+    config.priceLists.forEach((list, index) => {
+      if (seenVersions.has(list.version)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Duplicate price list version: "${list.version}"`,
+          path: ['priceLists', index, 'version'],
+        });
+      }
+      seenVersions.add(list.version);
+    });
+
+    // Windows are [from, to): adjacency (prev.to === next.from) is a seamless join, gaps are allowed.
+    const sorted = config.priceLists
+      .map((list) => ({
+        version: list.version,
+        from: Date.parse(list.effectiveFrom),
+        to: list.effectiveTo ? Date.parse(list.effectiveTo) : Infinity,
+      }))
+      .sort((a, b) => a.from - b.from);
+
+    let previous: (typeof sorted)[number] | undefined;
+    for (const current of sorted) {
+      if (previous && current.from < previous.to) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Price lists "${previous.version}" and "${current.version}" have overlapping effective windows`,
+          path: ['priceLists'],
+        });
+      }
+      previous = current;
+    }
+  });
 
 // --- Per-strategy dimension validation -------------------------------------
 
