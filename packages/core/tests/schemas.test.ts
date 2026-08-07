@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CalculationDimensionsSchema, PricingEngine } from '../src/index.js';
+import {
+  CalculationDimensionsSchema,
+  PricingEngine,
+  type PricingEngineConfig,
+} from '../src/index.js';
 
 describe('PricingRuleConfigSchema', () => {
   it('throws on empty rule name', () => {
@@ -236,5 +240,169 @@ describe('CalculationDimensionsSchema', () => {
 
   it('still accepts area dimensions', () => {
     expect(() => CalculationDimensionsSchema.parse({ width: 2, height: 3 })).not.toThrow();
+  });
+});
+
+describe('PriceListSchema', () => {
+  const rules = [{ name: 'flat-surface', type: 'area', unitPrice: 10, unit: 'm2' }];
+
+  it('throws if a price list has no rules', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [{ version: '2026', effectiveFrom: '2026-01-01', rules: [] }],
+        }),
+    ).toThrow('At least one rule is required');
+  });
+
+  it('throws if rule names are not unique within a price list', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            {
+              version: '2026',
+              effectiveFrom: '2026-01-01',
+              rules: [
+                { name: 'duplicate', type: 'area', unitPrice: 10, unit: 'm2' },
+                { name: 'duplicate', type: 'area', unitPrice: 20, unit: 'm2' },
+              ],
+            },
+          ],
+        }),
+    ).toThrow('Rule names must be unique within a price list');
+  });
+
+  it('allows the same rule name across price lists', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2025', effectiveFrom: '2025-01-01', effectiveTo: '2026-01-01', rules },
+            { version: '2026', effectiveFrom: '2026-01-01', rules },
+          ],
+        }),
+    ).not.toThrow();
+  });
+
+  it('throws when effectiveTo equals effectiveFrom', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026', effectiveFrom: '2026-01-01', effectiveTo: '2026-01-01', rules },
+          ],
+        }),
+    ).toThrow('effectiveFrom must be before effectiveTo');
+  });
+
+  it('throws when effectiveTo is before effectiveFrom', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026', effectiveFrom: '2026-06-01', effectiveTo: '2026-01-01', rules },
+          ],
+        }),
+    ).toThrow('effectiveFrom must be before effectiveTo');
+  });
+});
+
+describe('PricingEngineConfigSchema', () => {
+  const rules = [{ name: 'flat-surface', type: 'area', unitPrice: 10, unit: 'm2' }];
+
+  // The union type forbids this shape; the cast verifies the runtime guard still rejects it.
+  it('throws when both rules and priceLists are provided', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          rules,
+          priceLists: [{ version: '2026', effectiveFrom: '2026-01-01', rules }],
+        } as unknown as PricingEngineConfig),
+    ).toThrow('not both');
+  });
+
+  it('throws when neither rules nor priceLists are provided', () => {
+    expect(() => new PricingEngine({} as unknown as PricingEngineConfig)).toThrow(
+      'Config must contain',
+    );
+  });
+
+  it('throws if priceLists is empty', () => {
+    expect(() => new PricingEngine({ priceLists: [] })).toThrow(
+      'At least one price list is required',
+    );
+  });
+
+  it('throws on overlapping effective windows', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026-Q1', effectiveFrom: '2026-01-01', effectiveTo: '2026-04-01', rules },
+            { version: '2026-Q2', effectiveFrom: '2026-03-01', effectiveTo: '2026-07-01', rules },
+          ],
+        }),
+    ).toThrow('overlapping effective windows');
+  });
+
+  it('detects overlap regardless of input order', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026-Q2', effectiveFrom: '2026-03-01', effectiveTo: '2026-07-01', rules },
+            { version: '2026-Q1', effectiveFrom: '2026-01-01', effectiveTo: '2026-04-01', rules },
+          ],
+        }),
+    ).toThrow('overlapping effective windows');
+  });
+
+  it('throws when two price lists are open-ended', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2025', effectiveFrom: '2025-01-01', rules },
+            { version: '2026', effectiveFrom: '2026-01-01', rules },
+          ],
+        }),
+    ).toThrow('overlapping effective windows');
+  });
+
+  it('allows adjacent windows', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026-Q1', effectiveFrom: '2026-01-01', effectiveTo: '2026-04-01', rules },
+            { version: '2026-Q2', effectiveFrom: '2026-04-01', rules },
+          ],
+        }),
+    ).not.toThrow();
+  });
+
+  it('allows gaps between windows', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026-Q1', effectiveFrom: '2026-01-01', effectiveTo: '2026-04-01', rules },
+            { version: '2026-Q3', effectiveFrom: '2026-07-01', rules },
+          ],
+        }),
+    ).not.toThrow();
+  });
+
+  it('throws on duplicate version labels', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          priceLists: [
+            { version: '2026', effectiveFrom: '2026-01-01', effectiveTo: '2026-04-01', rules },
+            { version: '2026', effectiveFrom: '2026-04-01', rules },
+          ],
+        }),
+    ).toThrow('Duplicate price list version');
   });
 });
