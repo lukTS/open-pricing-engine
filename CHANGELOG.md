@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-08-18
+
+### Added
+
+- Price list versioning: an engine config can now provide `priceLists` instead of
+  a flat `rules` array. Each price list holds its own rules and an effective date
+  range — `effectiveFrom` (inclusive) and optional `effectiveTo` (exclusive), ISO
+  `YYYY-MM-DD` dates read as UTC midnight. Omitting `effectiveTo` leaves the list
+  open-ended.
+- `CalculationInput.date` — optional `Date` or ISO string, defaulting to the
+  current date, that selects the effective price list. This enables historical
+  quoting ("what would this order have cost last year").
+- Construction-time validation for versioned configs, each with a descriptive
+  error: exactly one of `rules` / `priceLists`, non-overlapping effective windows
+  (adjacent windows are allowed), unique `version` labels, `effectiveFrom` before
+  `effectiveTo`, and rule names unique **per price list**.
+- New runtime error when no price list covers the requested date:
+  `No price list is effective on <ISO date>`.
+- Architecture Decision Record documenting price list versioning
+  (`docs/adr/0002-price-list-versioning.md`).
+
+### Changed
+
+- A legacy `{ rules }` config is normalized internally into a single,
+  always-effective price list, so `calculate()` has one code path for both config
+  shapes. Existing configs, the `CalculationResult` shape and all existing error
+  messages are unchanged — 0.4.0 is additive and backward compatible.
+
 ## [0.3.0] - 2026-07-19
 
 ### Added
@@ -55,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zod validation for engine configuration and calculation input.
 - 100% test coverage.
 
+[0.4.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.1.0
