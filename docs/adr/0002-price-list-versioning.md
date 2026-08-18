@@ -1,6 +1,6 @@
 # ADR 0002: Price list versioning and effective dates
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-07-27
 - **Deciders:** Core maintainers
 

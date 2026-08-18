@@ -24,6 +24,7 @@ The npm ecosystem has plenty of billing and payment platforms (subscriptions, in
 - **Multiple pricing strategies** — area, linear, volume, weight, time, piece and flat
 - **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
+- **Price list versioning** — date-effective price lists for scheduled price changes and historical quotes
 - **Per-strategy validation** — each strategy's required dimensions are checked with descriptive errors
 - **Framework-agnostic** — pure TypeScript, runs anywhere
 - **Minimal dependencies** — only Zod for validation
@@ -104,6 +105,55 @@ engine.calculate({ rule: 'setup', dimensions: {}, quantity: 1 }).measure; // 1
 Missing required dimensions throw a descriptive validation error (for example,
 a `volume` rule without `depth`).
 
+## Price List Versioning
+
+Prices change over time. Instead of a single flat `rules` array, a config can
+declare **price lists** — each one a set of rules valid for a date range.
+`calculate()` resolves the list effective on the given `date` (defaults to now)
+and prices against its rules.
+
+```typescript
+const engine = new PricingEngine({
+  priceLists: [
+    {
+      version: '2025',
+      effectiveFrom: '2025-01-01',
+      effectiveTo: '2026-01-01', // exclusive → covers all of 2025
+      rules: [{ name: 'coating', type: 'area', unitPrice: 10, unit: 'm2' }],
+    },
+    {
+      version: '2026',
+      effectiveFrom: '2026-01-01', // open-ended → the current price list
+      rules: [{ name: 'coating', type: 'area', unitPrice: 12, unit: 'm2' }],
+    },
+  ],
+});
+
+const item = { rule: 'coating', dimensions: { width: 2, height: 1 }, quantity: 1 };
+
+engine.calculate(item).unitPrice; // 12 — date omitted → today's price list
+engine.calculate({ ...item, date: '2025-06-01' }).unitPrice; // 10 — historical quote
+```
+
+- `effectiveFrom` / `effectiveTo` are ISO calendar dates (`YYYY-MM-DD`), read as **UTC midnight**
+- The window is `[effectiveFrom, effectiveTo)` — start inclusive, end exclusive, so consecutive lists join seamlessly
+- Omitting `effectiveTo` leaves the list open-ended — the "current" price list
+- `date` accepts a `Date` or an ISO string; when omitted it defaults to the current date
+- The same rule name may repeat across versions — that is the point of versioning
+- Overlapping windows, duplicate `version` labels and inverted ranges are rejected when the engine is constructed
+- Gaps between windows are allowed; a date inside one throws `No price list is effective on <date>`
+
+The classic `rules` config keeps working unchanged — it is treated as a single,
+always-effective price list:
+
+```typescript
+const engine = new PricingEngine({
+  rules: [{ name: 'coating', type: 'area', unitPrice: 12, unit: 'm2' }],
+});
+```
+
+See [ADR 0002](docs/adr/0002-price-list-versioning.md) for the full rationale.
+
 ## Use Cases
 
 The engine works for any business where price depends on item dimensions:
@@ -111,8 +161,10 @@ The engine works for any business where price depends on item dimensions:
 - Metal coating & powder painting (price per m²)
 - CNC machining, laser cutting (price per area)
 - Glass, flooring, fabric (price per m² with minimum charge)
+- Any workflow that schedules price changes ahead or re-quotes past orders
+  ("what would this order have cost last year")
 
-Future versions will support tiered pricing, discounts, and custom formulas — see [Roadmap](#roadmap).
+Future versions will support tiered pricing and custom formulas — see [Roadmap](#roadmap).
 
 ## Roadmap
 
@@ -121,7 +173,7 @@ Future versions will support tiered pricing, discounts, and custom formulas — 
 | **v0.1** | Area-based pricing, JSON config, minimum charge             | Released |
 | **v0.2** | Discounts & surcharges (%, absolute)                        | Released |
 | **v0.3** | Calculation strategies (area, linear, volume, weight, etc.) | Released |
-| v0.4     | Price list versioning, effective dates                      | Planned  |
+| **v0.4** | Price list versioning, effective dates                      | Released |
 | v0.5     | Tiered pricing (volume & graduated)                         | Planned  |
 | v0.6     | REST API wrapper (Fastify)                                  | Planned  |
 | v0.7     | Interactive playground (React)                              | Planned  |

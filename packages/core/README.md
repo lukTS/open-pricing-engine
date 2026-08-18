@@ -48,12 +48,48 @@ const result = engine.calculate({
 // }
 ```
 
+## Price list versioning
+
+Rules can be grouped into **price lists**, each effective for a date range.
+`calculate()` uses the list effective on the given `date` (defaults to now), so
+the engine answers both "what does this cost today" and "what did this cost last
+year".
+
+```typescript
+const engine = new PricingEngine({
+  priceLists: [
+    {
+      version: '2025',
+      effectiveFrom: '2025-01-01',
+      effectiveTo: '2026-01-01', // exclusive → covers all of 2025
+      rules: [{ name: 'coating', type: 'area', unitPrice: 10, unit: 'm2' }],
+    },
+    {
+      version: '2026',
+      effectiveFrom: '2026-01-01', // open-ended → the current price list
+      rules: [{ name: 'coating', type: 'area', unitPrice: 12, unit: 'm2' }],
+    },
+  ],
+});
+
+const item = { rule: 'coating', dimensions: { width: 2, height: 1 }, quantity: 1 };
+
+engine.calculate(item).unitPrice; // 12 — date omitted → today's price list
+engine.calculate({ ...item, date: '2025-06-01' }).unitPrice; // 10 — historical quote
+```
+
+Dates are ISO calendar dates (`YYYY-MM-DD`) read as UTC midnight, and the window
+is `[effectiveFrom, effectiveTo)` — start inclusive, end exclusive. Overlapping
+windows are rejected when the engine is constructed. A plain `rules` config (as
+in the example above) keeps working unchanged.
+
 ## Features
 
 - **Config-driven** — define pricing rules in JSON
 - **Multiple pricing strategies** — area, linear, volume, weight, time, piece, flat
 - **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
+- **Price list versioning** — date-effective price lists and historical quotes
 - **TypeScript-first** — full type safety
 - **Zod validation** — descriptive errors for invalid config
 - **100% test coverage**
