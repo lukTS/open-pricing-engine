@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukTS/open-pricing-engine.git",
+    "url": "git+https://github.com/lukTS/open-pricing-engine.git",
     "directory": "packages/core"
   },
   "homepage": "https://github.com/lukTS/open-pricing-engine#readme",
