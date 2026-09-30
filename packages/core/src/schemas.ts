@@ -35,14 +35,47 @@ export const AdjustmentsSchema = z.array(AdjustmentSchema).superRefine((items, c
 /** Known strategy types, derived from the registry — no manual list to keep in sync. */
 export const RuleTypeSchema = z.enum(Object.keys(strategies) as [string, ...string[]]);
 
-export const PricingRuleConfigSchema = z.object({
-  name: z.string().min(1, 'Rule name is required'),
-  type: RuleTypeSchema,
-  unitPrice: z.number().positive('unitPrice must be positive'),
-  unit: z.string().min(1, 'Unit is required'),
-  minCharge: z.number().positive('minCharge must be positive').optional(),
-  adjustments: AdjustmentsSchema.optional(),
+export const TierBandSchema = z.object({
+  upTo: z.number().optional(),
+  unitPrice: z.number(),
 });
+
+// basis stays .optional() without .default(): the engine reads the raw config, not the parsed one.
+export const PricingTiersSchema = z.object({
+  mode: z.enum(['volume', 'graduated']),
+  basis: z.enum(['measure', 'total']).optional(),
+  bands: z.array(TierBandSchema),
+});
+
+export const PricingRuleConfigSchema = z
+  .object({
+    name: z.string().min(1, 'Rule name is required'),
+    type: RuleTypeSchema,
+    unitPrice: z.number().positive('unitPrice must be positive').optional(),
+    tiers: PricingTiersSchema.optional(),
+    unit: z.string().min(1, 'Unit is required'),
+    minCharge: z.number().positive('minCharge must be positive').optional(),
+    adjustments: AdjustmentsSchema.optional(),
+  })
+  // Same either/or technique as rules / priceLists: one readable message naming the rule.
+  .superRefine((rule, ctx) => {
+    const hasUnitPrice = rule.unitPrice !== undefined;
+    const hasTiers = rule.tiers !== undefined;
+
+    if (hasUnitPrice && hasTiers) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `Rule "${rule.name}": provide either "unitPrice" or "tiers", not both`,
+      });
+    }
+
+    if (!hasUnitPrice && !hasTiers) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `Rule "${rule.name}": must contain "unitPrice" or "tiers"`,
+      });
+    }
+  });
 
 export const CalculationDimensionsSchema = z.object({
   width: z.number().positive('Width must be positive').optional(),

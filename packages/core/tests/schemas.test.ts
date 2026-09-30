@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   CalculationDimensionsSchema,
+  PriceListSchema,
   PricingEngine,
+  PricingEngineConfigSchema,
+  PricingRuleConfigSchema,
   type PricingEngineConfig,
+  type PricingTiers,
 } from '../src/index.js';
 
 describe('PricingRuleConfigSchema', () => {
@@ -404,5 +408,109 @@ describe('PricingEngineConfigSchema', () => {
           ],
         }),
     ).toThrow('Duplicate price list version');
+  });
+});
+
+describe('PricingRuleConfigSchema tiers', () => {
+  const tiers: PricingTiers = {
+    mode: 'volume',
+    bands: [{ upTo: 10, unitPrice: 15 }, { unitPrice: 12 }],
+  };
+
+  it('accepts a tiered rule without unitPrice', () => {
+    expect(
+      () => new PricingEngine({ rules: [{ name: 'coating', type: 'area', unit: 'm2', tiers }] }),
+    ).not.toThrow();
+  });
+
+  // ZodError.message is JSON with escaped quotes, so messages are asserted on the parsed issues.
+  it('rejects both unitPrice and tiers', () => {
+    const result = PricingRuleConfigSchema.safeParse({
+      name: 'coating',
+      type: 'area',
+      unitPrice: 12,
+      unit: 'm2',
+      tiers,
+    });
+
+    expect(result.error?.issues[0]?.message).toBe(
+      'Rule "coating": provide either "unitPrice" or "tiers", not both',
+    );
+  });
+
+  it('rejects neither unitPrice nor tiers', () => {
+    const result = PricingRuleConfigSchema.safeParse({ name: 'coating', type: 'area', unit: 'm2' });
+
+    expect(result.error?.issues[0]?.message).toBe(
+      'Rule "coating": must contain "unitPrice" or "tiers"',
+    );
+  });
+
+  it('reports the rule error inside the legacy rules array', () => {
+    const result = PricingEngineConfigSchema.safeParse({
+      rules: [{ name: 'coating', type: 'area', unit: 'm2' }],
+    });
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Rule "coating": must contain "unitPrice" or "tiers"',
+      path: ['rules', 0],
+    });
+  });
+
+  it('reports the rule error inside a price list', () => {
+    const result = PriceListSchema.safeParse({
+      version: '2026',
+      effectiveFrom: '2026-01-01',
+      rules: [{ name: 'coating', type: 'area', unit: 'm2' }],
+    });
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Rule "coating": must contain "unitPrice" or "tiers"',
+      path: ['rules', 0],
+    });
+  });
+
+  it('throws on an unknown tier mode', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          rules: [
+            {
+              name: 'coating',
+              type: 'area',
+              unit: 'm2',
+              // @ts-expect-error testing runtime validation of an invalid tier mode
+              tiers: { ...tiers, mode: 'stepped' },
+            },
+          ],
+        }),
+    ).toThrow();
+  });
+
+  it('throws on an unknown tier basis', () => {
+    expect(
+      () =>
+        new PricingEngine({
+          rules: [
+            {
+              name: 'coating',
+              type: 'area',
+              unit: 'm2',
+              // @ts-expect-error testing runtime validation of an invalid tier basis
+              tiers: { ...tiers, basis: 'order' },
+            },
+          ],
+        }),
+    ).toThrow();
+  });
+
+  it('does not price tiered rules yet', () => {
+    const engine = new PricingEngine({
+      rules: [{ name: 'coating', type: 'area', unit: 'm2', tiers }],
+    });
+
+    expect(() =>
+      engine.calculate({ rule: 'coating', dimensions: { width: 2, height: 3 }, quantity: 1 }),
+    ).toThrow('Rule "coating": tiered pricing is not supported yet');
   });
 });
