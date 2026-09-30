@@ -4,8 +4,10 @@ export type PricingRuleConfig = {
   name: string;
   /** Calculation type, e.g. "area" */
   type: string;
-  /** Price per unit of measurement */
-  unitPrice: number;
+  /** Price per unit of measurement; exactly one of `unitPrice` / `tiers` must be set */
+  unitPrice?: number;
+  /** Tier table replacing the flat `unitPrice`; exactly one of `unitPrice` / `tiers` must be set */
+  tiers?: PricingTiers;
   /** Unit of measurement, e.g. "m2", "piece" */
   unit: string;
   /** If the calculated subtotal is below this value, it will be used instead */
@@ -85,3 +87,33 @@ export type Adjustment = {
 
 /** Adjustment with calculated amount after applying to subtotal */
 export type AppliedAdjustment = Adjustment & { amount: number };
+
+/** One bracket of a tier table. */
+export type TierBand = {
+  /** Inclusive upper bound of this band; omitted on the last (open-ended) band */
+  upTo?: number;
+  /** Rate charged for the portion of the basis inside this band */
+  unitPrice: number;
+};
+
+/** Tier table: the rate depends on how much is being priced. */
+export type PricingTiers = {
+  /** volume: one band rate for the whole basis, graduated: each portion priced in its own band */
+  mode: 'volume' | 'graduated';
+  /** What the bands are measured against: a single item (default "measure") or the whole line */
+  basis?: 'measure' | 'total';
+  /** Bands ordered by ascending `upTo`; the last one is open-ended */
+  bands: TierBand[];
+};
+
+/** Tier band with the portion of the basis it priced. */
+export type AppliedTier = {
+  /** Upper bound of the band as configured; omitted for the open-ended top band */
+  upTo?: number;
+  /** Rate charged for this band's portion */
+  unitPrice: number;
+  /** Portion of the tier basis charged at this rate */
+  measure: number;
+  /** measure × unitPrice */
+  amount: number;
+};

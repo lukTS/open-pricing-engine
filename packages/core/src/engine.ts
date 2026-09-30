@@ -57,6 +57,11 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
+    // Temporary until tier pricing lands (#83): tiered rules validate but cannot be priced yet.
+    if (rule.unitPrice === undefined) {
+      throw new Error(`Rule "${rule.name}": tiered pricing is not supported yet`);
+    }
+
     const strategy = strategies[rule.type];
     const dimensionsSchema = dimensionSchemasByType[rule.type];
     /* v8 ignore next 3 -- unreachable: rule.type is validated against the strategy registry at config time */
