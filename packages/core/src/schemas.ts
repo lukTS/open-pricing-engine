@@ -36,15 +36,58 @@ export const AdjustmentsSchema = z.array(AdjustmentSchema).superRefine((items, c
 export const RuleTypeSchema = z.enum(Object.keys(strategies) as [string, ...string[]]);
 
 export const TierBandSchema = z.object({
-  upTo: z.number().optional(),
-  unitPrice: z.number(),
+  upTo: z.number().positive('Tier band "upTo" must be positive').optional(),
+  unitPrice: z.number().positive('unitPrice must be positive'),
 });
 
 // basis stays .optional() without .default(): the engine reads the raw config, not the parsed one.
 export const PricingTiersSchema = z.object({
   mode: z.enum(['volume', 'graduated']),
   basis: z.enum(['measure', 'total']).optional(),
-  bands: z.array(TierBandSchema),
+  bands: z
+    .array(TierBandSchema)
+    .min(1, 'At least one tier band is required')
+    // Validated, not sorted (ADR 0003 §6): an out-of-order band is a typo, not something to repair.
+    .superRefine((bands, ctx) => {
+      const last = bands.length - 1;
+      const lastBand = bands[last];
+      // Empty bands are already reported by .min(1).
+      if (lastBand === undefined) return;
+
+      // Open-ended last band = total coverage by construction, so the tier math never hits a gap.
+      if (lastBand.upTo !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'The last tier band must omit "upTo" (open-ended)',
+          path: [last],
+        });
+      }
+
+      bands.forEach((band, index) => {
+        if (index !== last && band.upTo === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Only the last tier band may omit "upTo"',
+            path: [index],
+          });
+        }
+      });
+
+      // Bounds must strictly ascend; duplicates fail this same check.
+      // Bands without upTo were already reported above, so skip them here.
+      let previous: number | undefined;
+      bands.forEach((band, index) => {
+        if (band.upTo === undefined) return;
+        if (previous !== undefined && band.upTo <= previous) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Tier bands must be ordered by ascending "upTo"',
+            path: [index],
+          });
+        }
+        previous = band.upTo;
+      });
+    }),
 });
 
 export const PricingRuleConfigSchema = z

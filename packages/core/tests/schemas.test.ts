@@ -514,3 +514,125 @@ describe('PricingRuleConfigSchema tiers', () => {
     ).toThrow('Rule "coating": tiered pricing is not supported yet');
   });
 });
+
+describe('PricingTiers bands', () => {
+  const tieredRule = (bands: PricingTiers['bands']) => ({
+    name: 'coating',
+    type: 'area',
+    unit: 'm2',
+    tiers: { mode: 'volume', bands },
+  });
+
+  it('accepts a valid multi-band table', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ upTo: 10, unitPrice: 15 }, { upTo: 50, unitPrice: 12 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a single open-ended band (equivalent to a flat price)', () => {
+    const result = PricingRuleConfigSchema.safeParse(tieredRule([{ unitPrice: 12 }]));
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty bands', () => {
+    const result = PricingRuleConfigSchema.safeParse(tieredRule([]));
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'At least one tier band is required',
+      path: ['tiers', 'bands'],
+    });
+  });
+
+  it('rejects a non-positive band unitPrice', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ upTo: 10, unitPrice: 0 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'unitPrice must be positive',
+      path: ['tiers', 'bands', 0, 'unitPrice'],
+    });
+  });
+
+  it('rejects a non-positive upTo', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ upTo: 0, unitPrice: 15 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Tier band "upTo" must be positive',
+      path: ['tiers', 'bands', 0, 'upTo'],
+    });
+  });
+
+  it('rejects out-of-order bands without sorting them', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ upTo: 50, unitPrice: 12 }, { upTo: 10, unitPrice: 15 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Tier bands must be ordered by ascending "upTo"',
+      path: ['tiers', 'bands', 1],
+    });
+  });
+
+  it('rejects duplicate upTo values with the same ascending check', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ upTo: 10, unitPrice: 15 }, { upTo: 10, unitPrice: 12 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Tier bands must be ordered by ascending "upTo"',
+      path: ['tiers', 'bands', 1],
+    });
+  });
+
+  it('rejects a non-last band without upTo', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([{ unitPrice: 15 }, { upTo: 10, unitPrice: 12 }, { unitPrice: 10 }]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Only the last tier band may omit "upTo"',
+      path: ['tiers', 'bands', 0],
+    });
+  });
+
+  it('rejects a closed last band', () => {
+    const result = PricingRuleConfigSchema.safeParse(
+      tieredRule([
+        { upTo: 10, unitPrice: 15 },
+        { upTo: 50, unitPrice: 12 },
+      ]),
+    );
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'The last tier band must omit "upTo" (open-ended)',
+      path: ['tiers', 'bands', 1],
+    });
+  });
+
+  it('reports the band error inside the legacy rules array', () => {
+    const result = PricingEngineConfigSchema.safeParse({
+      rules: [
+        {
+          name: 'coating',
+          type: 'area',
+          unit: 'm2',
+          tiers: {
+            mode: 'volume',
+            bands: [{ upTo: 50, unitPrice: 12 }, { upTo: 10, unitPrice: 15 }, { unitPrice: 10 }],
+          },
+        },
+      ],
+    });
+
+    expect(result.error?.issues[0]).toMatchObject({
+      message: 'Tier bands must be ordered by ascending "upTo"',
+      path: ['rules', 0, 'tiers', 'bands', 1],
+    });
+  });
+});
