@@ -4,6 +4,7 @@ import {
   PricingEngineConfigSchema,
 } from './schemas.js';
 import { strategies } from './strategies/index.js';
+import { priceByTiers } from './tiers.js';
 import type {
   AppliedAdjustment,
   CalculationInput,
@@ -57,9 +58,12 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
-    // Temporary until tier pricing lands (#83): tiered rules validate but cannot be priced yet.
-    if (rule.unitPrice === undefined) {
-      throw new Error(`Rule "${rule.name}": tiered pricing is not supported yet`);
+    // Temporary until #84 / #85 land: these tier options validate but cannot be priced yet.
+    if (rule.tiers?.mode === 'graduated') {
+      throw new Error(`Rule "${rule.name}": graduated tier pricing is not supported yet`);
+    }
+    if (rule.tiers?.basis === 'total') {
+      throw new Error(`Rule "${rule.name}": the "total" tier basis is not supported yet`);
     }
 
     const strategy = strategies[rule.type];
@@ -73,7 +77,15 @@ export class PricingEngine {
     dimensionsSchema.parse(input.dimensions);
 
     const measure = strategy.measure(input.dimensions);
-    let subtotal = measure * rule.unitPrice;
+
+    // Volume tiers swap the flat rate for the band rate; the rest of the pipeline is unchanged.
+    const unitPrice = rule.tiers ? priceByTiers(measure, rule.tiers).unitPrice : rule.unitPrice;
+    /* v8 ignore next 3 -- unreachable: the schema requires exactly one of unitPrice / tiers */
+    if (unitPrice === undefined) {
+      throw new Error(`Rule "${rule.name}": must contain "unitPrice" or "tiers"`);
+    }
+
+    let subtotal = measure * unitPrice;
 
     if (rule.minCharge && subtotal < rule.minCharge) {
       subtotal = rule.minCharge;
@@ -95,7 +107,7 @@ export class PricingEngine {
     return {
       rule: rule.name,
       measure,
-      unitPrice: rule.unitPrice,
+      unitPrice,
       subtotal,
       adjustments: appliedAdjustments,
       adjusted,

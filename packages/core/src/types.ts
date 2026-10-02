@@ -44,7 +44,7 @@ export type CalculationResult = {
   rule: string;
   /** Computed measure (strategy-dependent: area, length, volume, etc.) */
   measure: number;
-  /** Price per unit from the matched rule */
+  /** Effective rate: the rule's unitPrice, or the applied band rate for tiered rules */
   unitPrice: number;
   /** measure × unitPrice (or minCharge if higher) */
   subtotal: number;
