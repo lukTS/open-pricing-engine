@@ -503,16 +503,6 @@ describe('PricingRuleConfigSchema tiers', () => {
         }),
     ).toThrow();
   });
-
-  it('does not price tiered rules yet', () => {
-    const engine = new PricingEngine({
-      rules: [{ name: 'coating', type: 'area', unit: 'm2', tiers }],
-    });
-
-    expect(() =>
-      engine.calculate({ rule: 'coating', dimensions: { width: 2, height: 3 }, quantity: 1 }),
-    ).toThrow('Rule "coating": tiered pricing is not supported yet');
-  });
 });
 
 describe('PricingTiers bands', () => {
