@@ -100,16 +100,85 @@ describe('volume tier pricing', () => {
   });
 });
 
+describe('graduated tier pricing', () => {
+  const bands = [{ upTo: 2, unitPrice: 15 }, { upTo: 5, unitPrice: 12 }, { unitPrice: 10 }];
+  const engine = tieredEngine({ mode: 'graduated', bands });
+
+  it('prices a measure inside the first band at its rate', () => {
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 1, height: 1.5 },
+      quantity: 1,
+    });
+
+    expect(result.unitPrice).toBe(15);
+    expect(result.subtotal).toBe(22.5);
+  });
+
+  it('prices each portion of a measure spanning two bands at its own rate', () => {
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 2 },
+      quantity: 1,
+    });
+
+    // 2 × 15 + 2 × 12 = 54 → blended 54 / 4
+    expect(result.unitPrice).toBe(13.5);
+    expect(result.subtotal).toBe(54);
+  });
+
+  it('prices a measure spanning every band, including the open-ended one', () => {
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 3, height: 3 },
+      quantity: 1,
+    });
+
+    // 2 × 15 + 3 × 12 + 4 × 10 = 106 → blended 106 / 9
+    expect(result.unitPrice).toBeCloseTo(106 / 9);
+    expect(result.subtotal).toBe(106);
+  });
+
+  it('treats upTo as inclusive', () => {
+    const atFirstBound = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 1 },
+      quantity: 1,
+    });
+    const atSecondBound = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 5, height: 1 },
+      quantity: 1,
+    });
+
+    expect(atFirstBound.unitPrice).toBe(15);
+    expect(atFirstBound.subtotal).toBe(30);
+    // 2 × 15 + 3 × 12 = 66 → blended 66 / 5
+    expect(atSecondBound.unitPrice).toBe(13.2);
+    expect(atSecondBound.subtotal).toBe(66);
+  });
+
+  it('prices a single-band table exactly like a flat unitPrice', () => {
+    const input = { rule: 'coating', dimensions: { width: 2, height: 3 }, quantity: 2 };
+    const flat = new PricingEngine({
+      rules: [{ name: 'coating', type: 'area', unit: 'm2', unitPrice: 12.5 }],
+    });
+    const singleBand = tieredEngine({ mode: 'graduated', bands: [{ unitPrice: 12.5 }] });
+
+    expect(singleBand.calculate(input)).toStrictEqual(flat.calculate(input));
+  });
+
+  it('charges a different total than volume mode on the same bands', () => {
+    const input = { rule: 'coating', dimensions: { width: 3, height: 3 }, quantity: 1 };
+    const volume = tieredEngine({ mode: 'volume', bands });
+
+    expect(engine.calculate(input).total).toBe(106);
+    expect(volume.calculate(input).total).toBe(90);
+  });
+});
+
 describe('tier options not supported yet', () => {
   const input = { rule: 'coating', dimensions: { width: 2, height: 3 }, quantity: 1 };
-
-  it('does not price graduated tiers yet', () => {
-    const engine = tieredEngine({ mode: 'graduated', bands: [{ unitPrice: 12 }] });
-
-    expect(() => engine.calculate(input)).toThrow(
-      'Rule "coating": graduated tier pricing is not supported yet',
-    );
-  });
 
   it('does not price the "total" tier basis yet', () => {
     const engine = tieredEngine({ mode: 'volume', basis: 'total', bands: [{ unitPrice: 12 }] });
