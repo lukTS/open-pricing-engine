@@ -58,10 +58,7 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
-    // Temporary until #84 / #85 land: these tier options validate but cannot be priced yet.
-    if (rule.tiers?.mode === 'graduated') {
-      throw new Error(`Rule "${rule.name}": graduated tier pricing is not supported yet`);
-    }
+    // Temporary until #85 lands: the "total" basis validates but cannot be priced yet.
     if (rule.tiers?.basis === 'total') {
       throw new Error(`Rule "${rule.name}": the "total" tier basis is not supported yet`);
     }
@@ -78,14 +75,15 @@ export class PricingEngine {
 
     const measure = strategy.measure(input.dimensions);
 
-    // Volume tiers swap the flat rate for the band rate; the rest of the pipeline is unchanged.
-    const unitPrice = rule.tiers ? priceByTiers(measure, rule.tiers).unitPrice : rule.unitPrice;
+    // Tiered pricing replaces the flat rate; the rest of the pipeline is unchanged.
+    const tierPrice = rule.tiers ? priceByTiers(measure, rule.tiers) : undefined;
+    const unitPrice = tierPrice?.unitPrice ?? rule.unitPrice;
     /* v8 ignore next 3 -- unreachable: the schema requires exactly one of unitPrice / tiers */
     if (unitPrice === undefined) {
       throw new Error(`Rule "${rule.name}": must contain "unitPrice" or "tiers"`);
     }
 
-    let subtotal = measure * unitPrice;
+    let subtotal = tierPrice?.amount ?? measure * unitPrice;
 
     if (rule.minCharge && subtotal < rule.minCharge) {
       subtotal = rule.minCharge;
