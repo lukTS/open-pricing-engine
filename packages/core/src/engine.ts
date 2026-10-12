@@ -58,11 +58,6 @@ export class PricingEngine {
       throw new Error(`Unknown rule: "${input.rule}"`);
     }
 
-    // Temporary until #85 lands: the "total" basis validates but cannot be priced yet.
-    if (rule.tiers?.basis === 'total') {
-      throw new Error(`Rule "${rule.name}": the "total" tier basis is not supported yet`);
-    }
-
     const strategy = strategies[rule.type];
     const dimensionsSchema = dimensionSchemasByType[rule.type];
     /* v8 ignore next 3 -- unreachable: rule.type is validated against the strategy registry at config time */
@@ -76,14 +71,21 @@ export class PricingEngine {
     const measure = strategy.measure(input.dimensions);
 
     // Tiered pricing replaces the flat rate; the rest of the pipeline is unchanged.
-    const tierPrice = rule.tiers ? priceByTiers(measure, rule.tiers) : undefined;
+    const tierBasis = rule.tiers?.basis ?? 'measure';
+    const basisValue = tierBasis === 'total' ? measure * input.quantity : measure;
+    const tierPrice = rule.tiers ? priceByTiers(basisValue, rule.tiers) : undefined;
     const unitPrice = tierPrice?.unitPrice ?? rule.unitPrice;
     /* v8 ignore next 3 -- unreachable: the schema requires exactly one of unitPrice / tiers */
     if (unitPrice === undefined) {
       throw new Error(`Rule "${rule.name}": must contain "unitPrice" or "tiers"`);
     }
 
-    let subtotal = tierPrice?.amount ?? measure * unitPrice;
+    let subtotal = measure * unitPrice;
+
+    // A graduated amount is per item on "measure" but per line on "total" (ADR 0003 §4).
+    if (rule.tiers?.mode === 'graduated' && tierPrice) {
+      subtotal = tierBasis === 'total' ? tierPrice.amount / input.quantity : tierPrice.amount;
+    }
 
     if (rule.minCharge && subtotal < rule.minCharge) {
       subtotal = rule.minCharge;

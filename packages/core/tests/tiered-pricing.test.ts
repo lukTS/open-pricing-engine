@@ -177,14 +177,87 @@ describe('graduated tier pricing', () => {
   });
 });
 
-describe('tier options not supported yet', () => {
-  const input = { rule: 'coating', dimensions: { width: 2, height: 3 }, quantity: 1 };
+describe('tier basis', () => {
+  const bands = [{ upTo: 10, unitPrice: 15 }, { upTo: 50, unitPrice: 12 }, { unitPrice: 10 }];
+  // 20 panels × 3 m² = 60 m² on the whole line
+  const input = { rule: 'coating', dimensions: { width: 3, height: 1 }, quantity: 20 };
 
-  it('does not price the "total" tier basis yet', () => {
-    const engine = tieredEngine({ mode: 'volume', basis: 'total', bands: [{ unitPrice: 12 }] });
+  it('prices a quantity discount on a piece rule, where the basis equals the quantity', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'label',
+          type: 'piece',
+          unit: 'piece',
+          tiers: {
+            mode: 'volume',
+            basis: 'total',
+            bands: [{ upTo: 99, unitPrice: 0.5 }, { unitPrice: 0.35 }],
+          },
+        },
+      ],
+    });
 
-    expect(() => engine.calculate(input)).toThrow(
-      'Rule "coating": the "total" tier basis is not supported yet',
-    );
+    const belowBreak = engine.calculate({ rule: 'label', dimensions: {}, quantity: 99 });
+    const fromBreak = engine.calculate({ rule: 'label', dimensions: {}, quantity: 100 });
+
+    expect(belowBreak.unitPrice).toBe(0.5);
+    expect(belowBreak.total).toBe(49.5);
+    expect(fromBreak.unitPrice).toBe(0.35);
+    expect(fromBreak.subtotal).toBe(0.35);
+    expect(fromBreak.total).toBe(35);
+  });
+
+  it('prices graduated bands against the whole line on an area rule', () => {
+    const engine = tieredEngine({ mode: 'graduated', basis: 'total', bands });
+
+    const result = engine.calculate(input);
+
+    // 10 × 15 + 40 × 12 + 10 × 10 = 730 → blended 730 / 60, per item 730 / 20
+    expect(result.measure).toBe(3);
+    expect(result.unitPrice).toBeCloseTo(730 / 60);
+    expect(result.subtotal).toBe(36.5);
+    expect(result.total).toBe(730);
+  });
+
+  it('prices volume bands against the whole line on an area rule', () => {
+    const engine = tieredEngine({ mode: 'volume', basis: 'total', bands });
+
+    const result = engine.calculate(input);
+
+    // 60 m² falls into the open-ended band → every m² at 10
+    expect(result.unitPrice).toBe(10);
+    expect(result.subtotal).toBe(30);
+    expect(result.total).toBe(600);
+  });
+
+  it('charges a different total for the same table on each basis', () => {
+    const perItem = tieredEngine({ mode: 'graduated', basis: 'measure', bands });
+    const perLine = tieredEngine({ mode: 'graduated', basis: 'total', bands });
+
+    // per item: 3 m² stays in the first band → 3 × 15 × 20
+    expect(perItem.calculate(input).total).toBe(900);
+    expect(perLine.calculate(input).total).toBe(730);
+  });
+
+  it('defaults to the "measure" basis when omitted', () => {
+    const explicit = tieredEngine({ mode: 'graduated', basis: 'measure', bands });
+    const omitted = tieredEngine({ mode: 'graduated', bands });
+
+    expect(omitted.calculate(input)).toStrictEqual(explicit.calculate(input));
+  });
+
+  it('keeps the line total equal to the tiered amount without minCharge or adjustments', () => {
+    const engine = tieredEngine({ mode: 'graduated', basis: 'total', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 4.1, height: 1 },
+      quantity: 3,
+    });
+
+    // 4.1 × 3 = 12.3 m²: 10 × 15 + 2.3 × 12 = 177.6
+    expect(result.subtotal).toBeCloseTo(59.2);
+    expect(result.total).toBeCloseTo(177.6);
   });
 });
