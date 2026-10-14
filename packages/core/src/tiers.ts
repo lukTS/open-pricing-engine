@@ -1,9 +1,10 @@
-import type { PricingTiers } from './types.js';
+import type { AppliedTier, PricingTiers } from './types.js';
 
-/** Tiered amount for a basis value and the effective rate it was charged at. */
+/** Tiered amount for a basis value, the effective rate it was charged at and its band breakdown. */
 export type TierPrice = {
   amount: number;
   unitPrice: number;
+  appliedTiers: AppliedTier[];
 };
 
 /** Prices a basis value against a tier table (ADR 0003 §3). */
@@ -12,6 +13,7 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
   if (tiers.mode === 'graduated') {
     let amount = 0;
     let previousUpTo = 0;
+    const appliedTiers: AppliedTier[] = [];
 
     for (const band of tiers.bands) {
       const currentUpTo = band.upTo ?? Infinity;
@@ -22,12 +24,20 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
         continue;
       }
 
-      amount += portion * band.unitPrice;
+      const bandAmount = portion * band.unitPrice;
+      amount += bandAmount;
+      appliedTiers.push({
+        ...(band.upTo !== undefined ? { upTo: band.upTo } : {}),
+        unitPrice: band.unitPrice,
+        measure: portion,
+        amount: bandAmount,
+      });
     }
 
     return {
       amount,
       unitPrice: amount / basisValue,
+      appliedTiers,
     };
   }
 
@@ -38,5 +48,18 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
     throw new Error('Tier table has no open-ended band');
   }
 
-  return { amount: basisValue * band.unitPrice, unitPrice: band.unitPrice };
+  const amount = basisValue * band.unitPrice;
+
+  return {
+    amount,
+    unitPrice: band.unitPrice,
+    appliedTiers: [
+      {
+        ...(band.upTo !== undefined ? { upTo: band.upTo } : {}),
+        unitPrice: band.unitPrice,
+        measure: basisValue,
+        amount,
+      },
+    ],
+  };
 };

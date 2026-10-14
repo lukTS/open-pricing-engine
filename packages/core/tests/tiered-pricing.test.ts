@@ -96,7 +96,10 @@ describe('volume tier pricing', () => {
     });
     const singleBand = tieredEngine({ mode: 'volume', bands: [{ unitPrice: 12.5 }] });
 
-    expect(singleBand.calculate(input)).toStrictEqual(flat.calculate(input));
+    const { appliedTiers, ...result } = singleBand.calculate(input);
+
+    expect(result).toStrictEqual(flat.calculate(input));
+    expect(appliedTiers).toStrictEqual([{ unitPrice: 12.5, measure: 6, amount: 75 }]);
   });
 });
 
@@ -165,7 +168,10 @@ describe('graduated tier pricing', () => {
     });
     const singleBand = tieredEngine({ mode: 'graduated', bands: [{ unitPrice: 12.5 }] });
 
-    expect(singleBand.calculate(input)).toStrictEqual(flat.calculate(input));
+    const { appliedTiers, ...result } = singleBand.calculate(input);
+
+    expect(result).toStrictEqual(flat.calculate(input));
+    expect(appliedTiers).toStrictEqual([{ unitPrice: 12.5, measure: 6, amount: 75 }]);
   });
 
   it('charges a different total than volume mode on the same bands', () => {
@@ -259,5 +265,107 @@ describe('tier basis', () => {
     // 4.1 × 3 = 12.3 m²: 10 × 15 + 2.3 × 12 = 177.6
     expect(result.subtotal).toBeCloseTo(59.2);
     expect(result.total).toBeCloseTo(177.6);
+  });
+});
+
+describe('applied tier breakdown', () => {
+  const bands = [{ upTo: 2, unitPrice: 15 }, { upTo: 5, unitPrice: 12 }, { unitPrice: 10 }];
+
+  it('reports a single entry covering the whole basis in volume mode', () => {
+    const engine = tieredEngine({ mode: 'volume', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 2 },
+      quantity: 1,
+    });
+
+    expect(result.appliedTiers).toStrictEqual([{ upTo: 5, unitPrice: 12, measure: 4, amount: 48 }]);
+  });
+
+  it('omits upTo for the open-ended band', () => {
+    const engine = tieredEngine({ mode: 'volume', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 3, height: 3 },
+      quantity: 1,
+    });
+
+    expect(result.appliedTiers).toStrictEqual([{ unitPrice: 10, measure: 9, amount: 90 }]);
+  });
+
+  it('reports one entry per band that received a portion in graduated mode', () => {
+    const engine = tieredEngine({ mode: 'graduated', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 2 },
+      quantity: 1,
+    });
+
+    // the open-ended band received nothing and is omitted
+    expect(result.appliedTiers).toStrictEqual([
+      { upTo: 2, unitPrice: 15, measure: 2, amount: 30 },
+      { upTo: 5, unitPrice: 12, measure: 2, amount: 24 },
+    ]);
+  });
+
+  it('reports entries per whole line on the "total" basis', () => {
+    const engine = tieredEngine({
+      mode: 'graduated',
+      basis: 'total',
+      bands: [{ upTo: 10, unitPrice: 15 }, { upTo: 50, unitPrice: 12 }, { unitPrice: 10 }],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 3, height: 1 },
+      quantity: 20,
+    });
+
+    expect(result.appliedTiers).toStrictEqual([
+      { upTo: 10, unitPrice: 15, measure: 10, amount: 150 },
+      { upTo: 50, unitPrice: 12, measure: 40, amount: 480 },
+      { unitPrice: 10, measure: 10, amount: 100 },
+    ]);
+  });
+
+  it('keeps the sum of entry amounts equal to the tiered amount', () => {
+    const engine = tieredEngine({ mode: 'graduated', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 3.3, height: 2.7 },
+      quantity: 1,
+    });
+
+    const sum = (result.appliedTiers ?? []).reduce((acc, tier) => acc + tier.amount, 0);
+
+    expect(result.appliedTiers).toHaveLength(3);
+    expect(sum).toBe(result.subtotal);
+  });
+
+  it('leaves an untiered result identical to the pre-v0.5 shape', () => {
+    const engine = new PricingEngine({
+      rules: [{ name: 'coating', type: 'area', unit: 'm2', unitPrice: 12 }],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 3 },
+      quantity: 2,
+    });
+
+    expect(result).toStrictEqual({
+      rule: 'coating',
+      measure: 6,
+      unitPrice: 12,
+      subtotal: 72,
+      adjustments: [],
+      adjusted: 72,
+      quantity: 2,
+      total: 144,
+    });
   });
 });

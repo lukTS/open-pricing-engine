@@ -113,6 +113,7 @@ export class PricingEngine {
       adjusted,
       quantity: input.quantity,
       total,
+      ...(tierPrice ? { appliedTiers: tierPrice.appliedTiers } : {}),
     };
   }
 }
