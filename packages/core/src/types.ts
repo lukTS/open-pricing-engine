@@ -56,6 +56,8 @@ export type CalculationResult = {
   adjustments: AppliedAdjustment[];
   /** Subtotal after all adjustments applied (equals subtotal if none) */
   adjusted: number;
+  /** Tier breakdown in basis units (per item or per line); present only for tiered rules */
+  appliedTiers?: AppliedTier[];
 };
 
 /** Versioned price list with rules active during a specific date range. */
