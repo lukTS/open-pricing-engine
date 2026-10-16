@@ -369,3 +369,202 @@ describe('applied tier breakdown', () => {
     });
   });
 });
+
+describe('tiers with minCharge', () => {
+  const bands = [{ upTo: 2, unitPrice: 15 }, { unitPrice: 12 }];
+
+  it('raises a tiered subtotal below minCharge to the floor, per item', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'coating',
+          type: 'area',
+          unit: 'm2',
+          tiers: { mode: 'graduated', bands },
+          minCharge: 20,
+        },
+      ],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 1, height: 1 },
+      quantity: 3,
+    });
+
+    // 1 m² × 15 = 15 per item, below the floor of 20
+    expect(result.unitPrice).toBe(15);
+    expect(result.subtotal).toBe(20);
+    expect(result.total).toBe(60);
+    expect(result.appliedTiers).toStrictEqual([{ upTo: 2, unitPrice: 15, measure: 1, amount: 15 }]);
+  });
+
+  it('floors the per-item share of a "total" basis line, not the line itself', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'coating',
+          type: 'area',
+          unit: 'm2',
+          tiers: { mode: 'graduated', basis: 'total', bands },
+          minCharge: 20,
+        },
+      ],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 1, height: 1 },
+      quantity: 4,
+    });
+
+    // 4 m² on the line: 2 × 15 + 2 × 12 = 54 → 13.5 per item, below the floor of 20
+    expect(result.subtotal).toBe(20);
+    expect(result.total).toBe(80);
+    expect(result.appliedTiers).toStrictEqual([
+      { upTo: 2, unitPrice: 15, measure: 2, amount: 30 },
+      { unitPrice: 12, measure: 2, amount: 24 },
+    ]);
+  });
+});
+
+describe('tiers with adjustments', () => {
+  const bands = [{ upTo: 2, unitPrice: 15 }, { unitPrice: 12 }];
+
+  it('applies a percentage adjustment to the tiered subtotal', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'coating',
+          type: 'area',
+          unit: 'm2',
+          tiers: { mode: 'graduated', bands },
+          adjustments: [{ name: 'priority', type: 'percentage', value: 10 }],
+        },
+      ],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 2, height: 2 },
+      quantity: 2,
+    });
+
+    // 2 × 15 + 2 × 12 = 54 → +10 % = 59.4 per item
+    expect(result.subtotal).toBe(54);
+    expect(result.adjustments).toStrictEqual([
+      { name: 'priority', type: 'percentage', value: 10, amount: expect.closeTo(5.4) },
+    ]);
+    expect(result.adjusted).toBeCloseTo(59.4);
+    expect(result.total).toBeCloseTo(118.8);
+  });
+
+  it('cascades adjustments over the tiered subtotal in declared order', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'coating',
+          type: 'area',
+          unit: 'm2',
+          tiers: { mode: 'volume', basis: 'total', bands },
+          adjustments: [
+            { name: 'coupon', type: 'fixed', value: 4 },
+            { name: 'priority', type: 'percentage', value: 10 },
+          ],
+        },
+      ],
+    });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 3, height: 1 },
+      quantity: 5,
+    });
+
+    // 15 m² on the line → every m² at 12; (36 + 4) × 1.1 = 44, percentage first would give 43.6
+    expect(result.unitPrice).toBe(12);
+    expect(result.subtotal).toBe(36);
+    expect(result.adjustments).toStrictEqual([
+      { name: 'coupon', type: 'fixed', value: 4, amount: 4 },
+      { name: 'priority', type: 'percentage', value: 10, amount: expect.closeTo(4) },
+    ]);
+    expect(result.adjusted).toBeCloseTo(44);
+    expect(result.total).toBeCloseTo(220);
+  });
+});
+
+describe('tiers with price list versioning', () => {
+  const engine = new PricingEngine({
+    priceLists: [
+      {
+        version: '2025',
+        effectiveFrom: '2025-01-01',
+        effectiveTo: '2026-01-01',
+        rules: [{ name: 'coating', type: 'area', unit: 'm2', unitPrice: 12 }],
+      },
+      {
+        version: '2026',
+        effectiveFrom: '2026-01-01',
+        effectiveTo: '2027-01-01',
+        rules: [
+          {
+            name: 'coating',
+            type: 'area',
+            unit: 'm2',
+            tiers: {
+              mode: 'graduated',
+              basis: 'total',
+              bands: [{ upTo: 10, unitPrice: 15 }, { upTo: 50, unitPrice: 12 }, { unitPrice: 10 }],
+            },
+          },
+        ],
+      },
+      {
+        version: '2027',
+        effectiveFrom: '2027-01-01',
+        rules: [
+          {
+            name: 'coating',
+            type: 'area',
+            unit: 'm2',
+            tiers: {
+              mode: 'graduated',
+              basis: 'total',
+              bands: [{ upTo: 10, unitPrice: 16 }, { upTo: 50, unitPrice: 13 }, { unitPrice: 11 }],
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  // 20 panels × 3 m² = 60 m² on the whole line
+  const input = { rule: 'coating', dimensions: { width: 3, height: 1 }, quantity: 20 };
+
+  it('resolves the tier table of the price list effective on the date', () => {
+    const current = engine.calculate({ ...input, date: '2026-06-15' });
+    const raised = engine.calculate({ ...input, date: '2027-06-15' });
+
+    // 10 × 15 + 40 × 12 + 10 × 10 = 730
+    expect(current.total).toBe(730);
+    // 10 × 16 + 40 × 13 + 10 × 11 = 790
+    expect(raised.subtotal).toBe(39.5);
+    expect(raised.total).toBe(790);
+    expect(raised.appliedTiers).toStrictEqual([
+      { upTo: 10, unitPrice: 16, measure: 10, amount: 160 },
+      { upTo: 50, unitPrice: 13, measure: 40, amount: 520 },
+      { unitPrice: 11, measure: 10, amount: 110 },
+    ]);
+  });
+
+  it('switches a rule from a flat unitPrice to a tier table between versions', () => {
+    const flat = engine.calculate({ ...input, date: '2025-06-15' });
+    const tiered = engine.calculate({ ...input, date: '2026-06-15' });
+
+    expect(flat.unitPrice).toBe(12);
+    expect(flat.total).toBe(720);
+    expect(flat).not.toHaveProperty('appliedTiers');
+    expect(tiered.unitPrice).toBeCloseTo(730 / 60);
+    expect(tiered.appliedTiers).toHaveLength(3);
+  });
+});
