@@ -1,6 +1,6 @@
 # ADR 0003: Tiered pricing (volume & graduated)
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-25
 - **Deciders:** Core maintainers
 

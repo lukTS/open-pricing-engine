@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-19
+
+### Added
+
+- Tiered pricing: a rule can now provide a `tiers` table instead of a flat
+  `unitPrice`. A tier table has a `mode`, an optional `basis` and a list of
+  `bands`, each with an inclusive upper bound `upTo` and the `unitPrice`
+  charged inside it. The last band omits `upTo` and is open-ended, so every
+  value is covered.
+  - `volume` — the whole basis is charged at the rate of the band it falls into.
+  - `graduated` — each portion of the basis is charged in its own band, like
+    tax brackets.
+- Tier basis: `basis: 'measure'` (default) applies the bands to a single item's
+  measure, `basis: 'total'` to the whole line (`measure × quantity`). This
+  enables classic quantity breaks, including for `piece` and `flat` rules.
+- `CalculationResult.appliedTiers` — the band breakdown of a tiered price
+  (`upTo`, `unitPrice`, `measure` and `amount` per band), expressed in basis
+  units. The key is present only for tiered rules. For tiered rules
+  `CalculationResult.unitPrice` reports the effective rate: the band rate for
+  `volume`, the blended rate for `graduated`.
+- New exported types `TierBand`, `PricingTiers` and `AppliedTier`.
+- Construction-time validation for tier tables, each with a descriptive error:
+  exactly one of `unitPrice` / `tiers` per rule, at least one band, positive
+  `upTo` and `unitPrice`, bands in strictly ascending `upTo` order (validated,
+  never sorted) and an open-ended last band.
+- Architecture Decision Record documenting tiered pricing
+  (`docs/adr/0003-tiered-pricing.md`).
+
+### Changed
+
+- `PricingRuleConfig.unitPrice` is now optional at the type level, because a
+  tiered rule has no flat price. TypeScript code that reads `rule.unitPrice`
+  directly sees it widen to `number | undefined`. Runtime behaviour is
+  unchanged: existing configs, the `CalculationResult` shape of untiered rules
+  (no `appliedTiers` key) and all existing error messages stay the same — 0.5.0
+  is additive and backward compatible.
+
 ## [0.4.0] - 2026-08-18
 
 ### Added
@@ -83,6 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zod validation for engine configuration and calculation input.
 - 100% test coverage.
 
+[0.5.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.5.0
 [0.4.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.4.0
 [0.3.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lukTS/open-pricing-engine/releases/tag/v0.2.0
