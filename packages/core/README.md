@@ -83,6 +83,65 @@ is `[effectiveFrom, effectiveTo)` — start inclusive, end exclusive. Overlappin
 windows are rejected when the engine is constructed. A plain `rules` config (as
 in the example above) keeps working unchanged.
 
+## Tiered pricing
+
+A rule can declare a **tier table** instead of a flat `unitPrice`, so the rate
+depends on how much is being priced. `volume` mode charges the whole basis at
+the rate of the band it falls into; `graduated` mode charges each portion in its
+own band, like tax brackets.
+
+```typescript
+const engine = new PricingEngine({
+  rules: [
+    {
+      name: 'coating',
+      type: 'area',
+      unit: 'm2',
+      tiers: {
+        mode: 'graduated',
+        basis: 'total', // the whole order line, not a single panel
+        bands: [
+          { upTo: 10, unitPrice: 15 }, // the first 10 m²
+          { upTo: 50, unitPrice: 12 }, // the next 40 m²
+          { unitPrice: 10 }, // everything above 50 m²
+        ],
+      },
+    },
+  ],
+});
+
+// 20 panels × 3 m² = 60 m² on the order line
+const result = engine.calculate({
+  rule: 'coating',
+  dimensions: { width: 3, height: 1 },
+  quantity: 20,
+});
+
+// Result:
+// {
+//   rule: 'coating',
+//   measure: 3,
+//   unitPrice: 12.1666…,    // blended rate: 730 / 60 m²
+//   subtotal: 36.50,        // per panel: 730 / 20
+//   adjustments: [],
+//   adjusted: 36.50,
+//   quantity: 20,
+//   total: 730.00,          // 10 × 15 + 40 × 12 + 10 × 10
+//   appliedTiers: [
+//     { upTo: 10, unitPrice: 15, measure: 10, amount: 150 },
+//     { upTo: 50, unitPrice: 12, measure: 40, amount: 480 },
+//     { unitPrice: 10, measure: 10, amount: 100 }
+//   ]
+// }
+```
+
+With `mode: 'volume'` the same 60 m² fall into the open-ended band and are all
+charged at 10 → `total: 600`. `basis` defaults to `'measure'` (bands apply to a
+single item); `'total'` applies them to `measure × quantity` — the only useful
+basis for `piece` and `flat` rules. `upTo` is inclusive, bands must be in
+ascending order and the last band must omit `upTo`. `appliedTiers` is present
+only for tiered rules.
+
 ## Features
 
 - **Config-driven** — define pricing rules in JSON
@@ -90,6 +149,7 @@ in the example above) keeps working unchanged.
 - **Discounts & surcharges** — percentage and fixed adjustments, applied as a cascade
 - **Minimum charge** — guaranteed price floor per item
 - **Price list versioning** — date-effective price lists and historical quotes
+- **Tiered pricing** — volume and graduated bands, per item or per order line
 - **TypeScript-first** — full type safety
 - **Zod validation** — descriptive errors for invalid config
 - **100% test coverage**

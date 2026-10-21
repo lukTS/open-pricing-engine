@@ -44,13 +44,13 @@ export type CalculationResult = {
   rule: string;
   /** Computed measure (strategy-dependent: area, length, volume, etc.) */
   measure: number;
-  /** Effective rate: the rule's unitPrice, or the applied band rate for tiered rules */
+  /** Effective rate: rule unitPrice, band rate (volume) or blended amount / basis (graduated) */
   unitPrice: number;
   /** measure × unitPrice (or minCharge if higher) */
   subtotal: number;
   /** Number of items */
   quantity: number;
-  /** subtotal × quantity */
+  /** adjusted × quantity */
   total: number;
   /** Applied adjustments with calculated amounts (empty array if none) */
   adjustments: AppliedAdjustment[];
