@@ -25,13 +25,15 @@ export class PricingEngine {
   private priceLists: NormalizedPriceList[];
 
   constructor(config: PricingEngineConfig) {
-    PricingEngineConfigSchema.parse(config);
+    // Validate and keep a private copy, so later mutations of the caller's config have no effect.
+    const ownConfig = structuredClone(config);
+    PricingEngineConfigSchema.parse(ownConfig);
 
     // Legacy { rules } normalizes to one always-effective list, so calculate() has a single shape.
     this.priceLists =
-      'rules' in config
-        ? [{ version: 'default', from: -Infinity, to: Infinity, rules: config.rules }]
-        : config.priceLists
+      'rules' in ownConfig
+        ? [{ version: 'default', from: -Infinity, to: Infinity, rules: ownConfig.rules }]
+        : ownConfig.priceLists
             .map((list) => ({
               version: list.version,
               from: Date.parse(list.effectiveFrom),
