@@ -9,6 +9,9 @@ export type TierPrice = {
 
 /** Prices a basis value against a tier table (ADR 0003 §3). */
 export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice => {
+  // 15 significant digits strip binary noise: 0.1 * 3 = 0.30000000000000004 becomes 0.3 again.
+  const basis = Number(basisValue.toPrecision(15));
+
   // Graduated mode prices each portion of the basis in its own band, like tax brackets.
   if (tiers.mode === 'graduated') {
     let amount = 0;
@@ -17,7 +20,7 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
 
     for (const band of tiers.bands) {
       const currentUpTo = band.upTo ?? Infinity;
-      const portion = Math.min(basisValue, currentUpTo) - previousUpTo;
+      const portion = Math.min(basis, currentUpTo) - previousUpTo;
       previousUpTo = currentUpTo;
 
       if (portion <= 0) {
@@ -36,19 +39,19 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
 
     return {
       amount,
-      unitPrice: amount / basisValue,
+      unitPrice: amount / basis,
       appliedTiers,
     };
   }
 
   // Volume mode: upTo is inclusive; the open-ended last band catches everything above the table.
-  const band = tiers.bands.find((b) => b.upTo === undefined || basisValue <= b.upTo);
+  const band = tiers.bands.find((b) => b.upTo === undefined || basis <= b.upTo);
   /* v8 ignore next 3 -- unreachable: the schema requires an open-ended last band */
   if (!band) {
     throw new Error('Tier table has no open-ended band');
   }
 
-  const amount = basisValue * band.unitPrice;
+  const amount = basis * band.unitPrice;
 
   return {
     amount,
@@ -57,7 +60,7 @@ export const priceByTiers = (basisValue: number, tiers: PricingTiers): TierPrice
       {
         ...(band.upTo !== undefined ? { upTo: band.upTo } : {}),
         unitPrice: band.unitPrice,
-        measure: basisValue,
+        measure: basis,
         amount,
       },
     ],

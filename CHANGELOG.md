@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The engine no longer keeps references to the caller's config. The config is
   deep-cloned before validation, so mutating it after `new PricingEngine()` no
   longer affects results or bypasses validation.
+- A tier basis that sits exactly on an inclusive `upTo` boundary in decimal is
+  no longer pushed into the next band by floating-point noise (for example a
+  0.1 × 3 m² item and `upTo: 0.3`). In `graduated` mode this also removes a
+  spurious near-zero `appliedTiers` entry.
 
 ## [0.5.0] - 2026-10-21
 
