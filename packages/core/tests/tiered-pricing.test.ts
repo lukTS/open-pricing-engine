@@ -370,6 +370,59 @@ describe('applied tier breakdown', () => {
   });
 });
 
+describe('tier boundaries with floating-point measures', () => {
+  const bands = [{ upTo: 0.3, unitPrice: 20 }, { unitPrice: 15 }];
+  // 0.1 × 3 is exactly 0.3 in decimal but 0.30000000000000004 in binary
+  const onBound = { rule: 'coating', dimensions: { width: 0.1, height: 3 }, quantity: 1 };
+
+  it('prices a measure on an inclusive bound in that band in volume mode', () => {
+    const engine = tieredEngine({ mode: 'volume', bands });
+
+    const result = engine.calculate(onBound);
+
+    expect(result.unitPrice).toBe(20);
+  });
+
+  it('adds no near-zero portion to the next band in graduated mode', () => {
+    const engine = tieredEngine({ mode: 'graduated', bands });
+
+    const result = engine.calculate(onBound);
+
+    expect(result.appliedTiers).toStrictEqual([
+      { upTo: 0.3, unitPrice: 20, measure: 0.3, amount: 6 },
+    ]);
+  });
+
+  it('prices a "total" basis on an inclusive bound in that band', () => {
+    const engine = new PricingEngine({
+      rules: [
+        {
+          name: 'profile',
+          type: 'linear',
+          unit: 'm',
+          tiers: { mode: 'volume', basis: 'total', bands },
+        },
+      ],
+    });
+
+    const result = engine.calculate({ rule: 'profile', dimensions: { length: 0.1 }, quantity: 3 });
+
+    expect(result.unitPrice).toBe(20);
+  });
+
+  it('still moves a measure genuinely above the bound to the next band', () => {
+    const engine = tieredEngine({ mode: 'volume', bands });
+
+    const result = engine.calculate({
+      rule: 'coating',
+      dimensions: { width: 0.31, height: 1 },
+      quantity: 1,
+    });
+
+    expect(result.unitPrice).toBe(15);
+  });
+});
+
 describe('tiers with minCharge', () => {
   const bands = [{ upTo: 2, unitPrice: 15 }, { unitPrice: 12 }];
 
