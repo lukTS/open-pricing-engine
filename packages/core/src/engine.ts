@@ -1,3 +1,4 @@
+import { PricingError } from './errors.js';
 import {
   CalculationInputSchema,
   dimensionSchemasByType,
@@ -52,12 +53,12 @@ export class PricingEngine {
 
     if (!priceList) {
       const isoDate = new Date(targetMs).toISOString().slice(0, 10);
-      throw new Error(`No price list is effective on ${isoDate}`);
+      throw new PricingError('NO_EFFECTIVE_PRICE_LIST', `No price list is effective on ${isoDate}`);
     }
 
     const rule = priceList.rules.find((r) => r.name === input.rule);
     if (!rule) {
-      throw new Error(`Unknown rule: "${input.rule}"`);
+      throw new PricingError('UNKNOWN_RULE', `Unknown rule: "${input.rule}"`);
     }
 
     const strategy = strategies[rule.type];
